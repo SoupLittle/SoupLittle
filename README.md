@@ -1,9 +1,29 @@
 <h1 align="center">Hi 👋, I'm Marlene</h1>
 <h3 align="center">A passionate (still in school) developer from Norway</h3>
 
-- 🌱 I’m currently learning **Phyton**
+Welcome to Marlene's GitHub account! Here you will find a collection of repositories showcasing various projects and contributions. This README provides an overview of the account and its contents.
 
-- ⚡ Fun fact **I also do figureskating**
+## About Marlene
+
+Hi, I'm a 17 year old girl who is currently in my second year at high school (information technology), I love coding especially coding big projects like; Magic Mirror, Plant Sensor and making games. The repositories on this GitHub account reflect my dedication to learning and creating innovative solutions.
+
+- 🌱 I’m currently learning this at school **Phyton**
+
+- ⚡ Fun fact **I also do figure skating and am serious about plants**
+
+## Repository Overview
+
+Here is a brief overview of some of the repositories available on my GitHub account:
+
+1. **Tverfaglig-nettside** - A repository containing a website about my first year at high school and my magic mirror project, + a little about me.
+
+3. **GuessingGame** - This repository explores different functions for making a guessing game.
+
+4. **Google-homepage-Css7** - We made the Google home page, honestly it is not the best but it is a way to show that I get better over time.
+
+5. **Coffe-Gif** - We had to make a gif as a school project.
+   
+7. **Climate** - A "blog" that was an assignment about climate.
 
 <h3 align="left">Connect with me:</h3>
 <p align="left">

@@ -17,13 +17,13 @@ Here is a brief overview of some of the repositories available on my GitHub acco
 
 1. **Tverfaglig-nettside** - A repository containing a website about my first year at high school and my magic mirror project, + a little about me.
 
-3. **GuessingGame** - This repository explores different functions for making a guessing game.
+3. **GuessingGame** - This repository explores different functions for making a number guessing game.
 
-4. **Google-homepage-Css7** - We made the Google home page, honestly it is not the best but it is a way to show that I get better over time.
+4. **2ITA-JS-DOM**[https://github.com/SoupLittle/2ITA-JS-DOM] - 
 
-5. **Coffe-Gif** - We had to make a gif as a school project.
+5. **2ITA-JS-DOM-2**[https://github.com/SoupLittle/2ITA-JS-DOM-2] - 
    
-7. **Climate** - A "blog" that was an assignment about climate.
+7. **2ITA-JS-Guessing-Game**[https://github.com/SoupLittle/2ITA-JS-Guessing-Game] - A "blog" that was an assignment about climate.
 
 <h3 align="left">Connect with me:</h3>
 <p align="left">

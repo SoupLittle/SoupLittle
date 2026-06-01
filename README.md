@@ -21,6 +21,10 @@ The repositories on this GitHub account reflect my dedication to learning and cr
 -  A small Node.js project that displays drink recipe cards (time, ingredients and steps).
 
 
+- [The Heartbook]()
+- A raspberry.pi project to function as a study hub, to keep focus and score of everything.
+
+
    
 <h3 align="left">Connect with me:</h3>
 <p align="left">

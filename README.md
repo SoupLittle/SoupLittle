@@ -3,14 +3,14 @@
 
 Welcome to Marlene's GitHub account! Here you will find a collection of repositories showcasing various projects and contributions. This README provides an overview of the account and its contents.
 
-## About Marlene
+## About ME
 
-Hi, I'm a 19 year old girl who is currently trying to broaden her knowledge on her own time. I love coding, especially coding big projects (mostly full-stack).
+Hi, I'm a 20 year old girl who is currently trying to broaden her knowledge on her own time. I love coding, especially coding big projects (mostly full-stack).
 The repositories on this GitHub account reflect my dedication to learning and creating innovative solutions.
 
 - 🔭 My favourite project that I'm working on is [Jarvis for home use](https://github.com/SoupLittle/Jarvis-for-home-management)
 
-- 🌱 I’m currently learning **SQL, Python and Javascript**
+- 🌱 I’m currently learning **Python, Javascript and general IoT**
 
 ##  I’m currently working on
 -  [ValueFlow](https://github.com/SoupLittle/ValueFlow)
@@ -21,7 +21,7 @@ The repositories on this GitHub account reflect my dedication to learning and cr
 -  A small Node.js project that displays drink recipe cards (time, ingredients and steps).
 
 
-- [The Heartbook]()
+- [The Heartbook](https://github.com/SoupLittle/The-Heartbook)
 - A raspberry.pi project to function as a study hub, to keep focus and score of everything.
 
 

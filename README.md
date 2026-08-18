@@ -13,7 +13,7 @@ The repositories on this GitHub account reflect my dedication to learning and cr
 - 🌱 I’m currently learning **Python, Javascript and general IoT**
 
 ##  I’m currently working on
--  [ValueFlow](https://github.com/SoupLittle/ValueFlow)
+-  [WarrenB](https://github.com/SoupLittle/WB-API)
 -  A StockMarked API and server-based website designed to help you make good day-trades, it follows Warren Buffett's strategy.
 
   

@@ -50,7 +50,7 @@ from pathlib import Path
 # =============================================================
 #
 # This is the section I recommend you look at first if you
-# want to customise something later.
+# want to customize something later.
 #
 # Most visual changes can be made further down in the file.
 # =============================================================
@@ -68,12 +68,12 @@ OUTPUT_FILE = Path(
 # -------------------------------------------------------------
 # How many languages should appear?
 #
-# You asked for SIX.
+# You asked for FIVE.
 #
-# Change this to 5, 7, 8, etc. if you ever want to.
+# Change this to 4, 6, 7, etc. if you ever want to.
 # -------------------------------------------------------------
 
-NUMBER_OF_LANGUAGES = 6
+NUMBER_OF_LANGUAGES = 5
 
 
 # -------------------------------------------------------------
@@ -97,7 +97,7 @@ EXCLUDED_REPOSITORIES = {
 # This is useful for your ESP32 / embedded projects because
 # GitHub may otherwise give C and C++ two separate rows.
 #
-# If you don't want this behaviour, remove this later.
+# If you don't want this behavior, remove this later.
 # -------------------------------------------------------------
 
 COMBINE_C_AND_CPP = True
@@ -109,7 +109,7 @@ COMBINE_C_AND_CPP = True
 #
 # This is where you can change the overall look.
 #
-# The colours are deliberately kept close to the vintage
+# The colors are deliberately kept close to the vintage
 # cream / terracotta / olive palette from the design.
 #
 # If you want to experiment, THIS is one of the easiest places
@@ -121,7 +121,7 @@ COMBINE_C_AND_CPP = True
 # Main background colour.
 # -------------------------------------------------------------
 
-DARK_GREEN = "#24382b"
+
 
 
 # -------------------------------------------------------------
@@ -167,12 +167,12 @@ EMPTY_BAR = "#dfcfaa"
 
 
 # -------------------------------------------------------------
-# Individual language colours.
+# Individual language colors.
 #
 # You can change these independently.
 # -------------------------------------------------------------
 
-LANGUAGE_COLOURS = {
+LANGUAGE_COLORS = {
 
     "JavaScript": "#d5a83c",
 
@@ -212,10 +212,10 @@ LANGUAGE_COLOURS = {
 
 # -------------------------------------------------------------
 # If a language isn't listed above, the script will use one
-# of these colours automatically.
+# of these colors automatically.
 # -------------------------------------------------------------
 
-FALLBACK_COLOURS = [
+FALLBACK_COLORS = [
     "#d5a83c",
     "#6f795b",
     "#c66a43",
@@ -837,16 +837,16 @@ def get_language_colour(
     """
 
 
-    if language in LANGUAGE_COLOURS:
+    if language in LANGUAGE_COLORS:
 
-        return LANGUAGE_COLOURS[
+        return LANGUAGE_COLORS[
             language
         ]
 
 
-    return FALLBACK_COLOURS[
+    return FALLBACK_COLORS[
         index
-        % len(FALLBACK_COLOURS)
+        % len(FALLBACK_COLORS)
     ]
 
 
@@ -1299,7 +1299,6 @@ def generate_svg(
   <rect
     width="{WIDTH}"
     height="{HEIGHT}"
-    fill="{DARK_GREEN}"
   />
 
 

@@ -13,17 +13,46 @@ from pathlib import Path
 
 OUTPUT_FILE = Path("assets/language-stack.svg")
 
-TOP_LANGUAGES = 5
+# Five rows fit nicely in the current design.
+DISPLAY_LANGUAGES = 5
+
+# These are the languages that best represent Marlene's actual
+# development stack.
+#
+# They are preferred for DISPLAY, but their percentages are
+# still calculated from the complete language total.
+PREFERRED_LANGUAGES = [
+    "JavaScript",
+    "Python",
+    "HTML",
+    "CSS",
+    "C / C++",
+    "Shell",
+]
+
+# Repositories that should not contribute to the statistics.
+EXCLUDED_REPOSITORIES = {
+    "SoupLittle",
+}
+
+
+# ============================================================
+# LANGUAGE DISPLAY COLORS
+# ============================================================
 
 LANGUAGE_COLORS = {
     "JavaScript": "#d5a83c",
-    "TypeScript": "#4d7770",
     "Python": "#8b7352",
-    "CSS": "#b9573d",
     "HTML": "#c66a43",
+    "CSS": "#b9573d",
+    "C / C++": "#65715c",
+    "Shell": "#547a75",
+
+    # Fallbacks for other languages.
+    "TypeScript": "#4d7770",
     "Java": "#a85d42",
     "C": "#65715c",
-    "C++": "#8c5b49",
+    "C++": "#65715c",
     "C#": "#68785b",
     "Go": "#547a75",
     "Rust": "#865b42",
@@ -31,15 +60,20 @@ LANGUAGE_COLORS = {
     "Ruby": "#a95747",
     "Kotlin": "#8c684d",
     "Swift": "#c76b43",
-    "Shell": "#56684d",
     "Dart": "#557b76",
     "Vue": "#64805c",
     "Jupyter Notebook": "#9b7650",
 }
 
-EXCLUDED_REPOSITORIES = {
-    "SoupLittle",
-}
+FALLBACK_COLORS = [
+    "#d5a83c",
+    "#4d7770",
+    "#8b7352",
+    "#b9573d",
+    "#c66a43",
+    "#65715c",
+    "#865b42",
+]
 
 
 # ============================================================
@@ -47,6 +81,10 @@ EXCLUDED_REPOSITORIES = {
 # ============================================================
 
 def github_request(url, token=None):
+    """
+    Make a GET request to the GitHub API.
+    """
+
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "SoupLittle-language-stack",
@@ -62,17 +100,25 @@ def github_request(url, token=None):
         method="GET",
     )
 
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.urlopen(
+        request,
+        timeout=30,
+    ) as response:
         return json.loads(
             response.read().decode("utf-8")
         )
 
 
 def get_all_repositories(username, token=None):
+    """
+    Get all public repositories owned by the user.
+    """
+
     repositories = []
     page = 1
 
     while True:
+
         query = urllib.parse.urlencode({
             "per_page": 100,
             "page": page,
@@ -85,9 +131,14 @@ def get_all_repositories(username, token=None):
             f"{urllib.parse.quote(username)}/repos?{query}"
         )
 
-        print(f"Fetching repositories page {page}...")
+        print(
+            f"Fetching repositories page {page}..."
+        )
 
-        data = github_request(url, token)
+        data = github_request(
+            url,
+            token,
+        )
 
         if not data:
             break
@@ -102,7 +153,16 @@ def get_all_repositories(username, token=None):
     return repositories
 
 
-def get_repository_languages(owner, repo, token=None):
+def get_repository_languages(
+    owner,
+    repo,
+    token=None,
+):
+    """
+    Get GitHub's byte counts for each language
+    in a repository.
+    """
+
     url = (
         f"https://api.github.com/repos/"
         f"{urllib.parse.quote(owner)}/"
@@ -110,11 +170,15 @@ def get_repository_languages(owner, repo, token=None):
     )
 
     try:
-        return github_request(url, token)
+        return github_request(
+            url,
+            token,
+        )
 
     except Exception as error:
         print(
-            f"Could not read languages for {repo}: {error}"
+            f"Could not read languages for "
+            f"{repo}: {error}"
         )
         return {}
 
@@ -123,7 +187,19 @@ def get_repository_languages(owner, repo, token=None):
 # LANGUAGE CALCULATION
 # ============================================================
 
-def calculate_languages(username, token=None):
+def calculate_languages(
+    username,
+    token=None,
+):
+    """
+    Scan repositories and aggregate language byte counts.
+
+    The percentages are calculated from ALL languages.
+
+    This is important:
+    the display preferences do NOT change the mathematics.
+    """
+
     repositories = get_all_repositories(
         username,
         token,
@@ -136,19 +212,30 @@ def calculate_languages(username, token=None):
 
         name = repository["name"]
 
+        # Don't count forks.
         if repository.get("fork", False):
-            print(f"Skipping fork: {name}")
+            print(
+                f"Skipping fork: {name}"
+            )
             continue
 
+        # Don't count archived repositories.
         if repository.get("archived", False):
-            print(f"Skipping archived repository: {name}")
+            print(
+                f"Skipping archived: {name}"
+            )
             continue
 
+        # Don't count the profile repository itself.
         if name in EXCLUDED_REPOSITORIES:
-            print(f"Skipping excluded repository: {name}")
+            print(
+                f"Skipping excluded: {name}"
+            )
             continue
 
-        print(f"Scanning: {name}")
+        print(
+            f"Scanning: {name}"
+        )
 
         languages = get_repository_languages(
             username,
@@ -158,7 +245,10 @@ def calculate_languages(username, token=None):
 
         for language, byte_count in languages.items():
 
-            if not isinstance(byte_count, int):
+            if not isinstance(
+                byte_count,
+                int,
+            ):
                 continue
 
             totals[language] = (
@@ -168,20 +258,20 @@ def calculate_languages(username, token=None):
 
         scanned += 1
 
-    total_bytes = sum(totals.values())
-
-    if total_bytes == 0:
-        return [], scanned
-
-    sorted_languages = sorted(
-        totals.items(),
-        key=lambda item: item[1],
-        reverse=True,
+    total_bytes = sum(
+        totals.values()
     )
+
+    if total_bytes <= 0:
+        return [], scanned
 
     results = []
 
-    for language, byte_count in sorted_languages:
+    for language, byte_count in sorted(
+        totals.items(),
+        key=lambda item: item[1],
+        reverse=True,
+    ):
 
         percentage = (
             byte_count / total_bytes
@@ -197,10 +287,135 @@ def calculate_languages(username, token=None):
 
 
 # ============================================================
+# DISPLAY LANGUAGE SELECTION
+# ============================================================
+
+def prepare_display_languages(
+    languages,
+):
+    """
+    Select the five languages shown on the card.
+
+    Priority:
+
+    1. JavaScript
+    2. Python
+    3. HTML
+    4. CSS
+    5. C / C++ or Shell / another language
+
+    This prevents an irrelevant language from pushing one
+    of Marlene's main technologies off the card.
+    """
+
+    by_name = {
+        item["name"]: item
+        for item in languages
+    }
+
+    # --------------------------------------------------------
+    # Combine C and C++.
+    #
+    # This is particularly useful for ESP32 and embedded
+    # projects where GitHub may split the code between the
+    # two languages.
+    # --------------------------------------------------------
+
+    c_bytes = by_name.get(
+        "C",
+        {"bytes": 0},
+    )["bytes"]
+
+    cpp_bytes = by_name.get(
+        "C++",
+        {"bytes": 0},
+    )["bytes"]
+
+    if c_bytes + cpp_bytes > 0:
+
+        total_bytes = sum(
+            item["bytes"]
+            for item in languages
+        )
+
+        combined_percentage = (
+            (c_bytes + cpp_bytes)
+            / total_bytes
+        ) * 100
+
+        c_cpp = {
+            "name": "C / C++",
+            "bytes": c_bytes + cpp_bytes,
+            "percentage": combined_percentage,
+        }
+
+        by_name["C / C++"] = c_cpp
+
+    # --------------------------------------------------------
+    # Pick preferred languages that actually exist.
+    # --------------------------------------------------------
+
+    selected = []
+
+    for preferred in PREFERRED_LANGUAGES:
+
+        if preferred not in by_name:
+            continue
+
+        item = by_name[preferred]
+
+        if item["bytes"] <= 0:
+            continue
+
+        selected.append(item)
+
+        if len(selected) >= DISPLAY_LANGUAGES:
+            break
+
+    # --------------------------------------------------------
+    # If we don't have five preferred languages,
+    # fill remaining slots with the largest other languages.
+    # --------------------------------------------------------
+
+    selected_names = {
+        item["name"]
+        for item in selected
+    }
+
+    remaining = sorted(
+        [
+            item
+            for item in languages
+            if item["name"]
+            not in selected_names
+            and item["name"] not in {
+                "C",
+                "C++",
+            }
+        ],
+        key=lambda item: item["bytes"],
+        reverse=True,
+    )
+
+    for item in remaining:
+
+        if len(selected) >= DISPLAY_LANGUAGES:
+            break
+
+        selected.append(item)
+
+    return selected
+
+
+# ============================================================
 # SVG HELPERS
 # ============================================================
 
 def escape_xml(value):
+    """
+    Safely escape text for SVG/XML.
+    """
+
     return (
         str(value)
         .replace("&", "&amp;")
@@ -211,75 +426,102 @@ def escape_xml(value):
     )
 
 
-def language_color(language, index):
+def language_color(
+    language,
+    index,
+):
+    """
+    Get a color for a language.
+    """
+
     if language in LANGUAGE_COLORS:
-        return LANGUAGE_COLORS[language]
+        return LANGUAGE_COLORS[
+            language
+        ]
 
-    fallback_colors = [
-        "#d5a83c",
-        "#4d7770",
-        "#8b7352",
-        "#b9573d",
-        "#c66a43",
-        "#65715c",
-        "#865b42",
-    ]
-
-    return fallback_colors[
-        index % len(fallback_colors)
+    return FALLBACK_COLORS[
+        index % len(FALLBACK_COLORS)
     ]
 
 
-def format_percentage(value):
-    if value > 0 and value < 0.1:
+def format_percentage(
+    percentage,
+):
+    """
+    Display percentages cleanly.
+
+    Examples:
+        74.23 -> 74.2%
+        14.00 -> 14.0%
+        0.04  -> <0.1%
+    """
+
+    if (
+        percentage > 0
+        and percentage < 0.1
+    ):
         return "<0.1%"
 
-    return f"{value:.1f}%"
+    return (
+        f"{percentage:.1f}%"
+    )
 
 
 # ============================================================
 # LANGUAGE ROWS
 # ============================================================
 
-def generate_language_rows(languages):
+def generate_language_rows(
+    languages,
+):
+    """
+    Generate the five language rows.
+
+    IMPORTANT:
+    A 74% language gets 74% of the available bar.
+
+    It is NOT normalized against the largest language.
+    """
+
+    if not languages:
+        return ""
 
     rows = []
 
-    top_languages = languages[:TOP_LANGUAGES]
-
-    if not top_languages:
-        return ""
-
-    # IMPORTANT:
-    #
-    # The bar represents the REAL percentage.
-    #
-    # 74% -> 74% of the available bar width
-    # 20% -> 20% of the available bar width
-    # 5%  -> 5% of the available bar width
-    #
-    # We DO NOT normalize against the largest language.
-
+    # Available width for the actual language bar.
     bar_max_width = 857
 
-    # More vertical room than before.
+    # The title ends around y=281.
     row_start_y = 330
+
+    # Enough vertical spacing for five complete rows.
     row_spacing = 62
 
-    for index, language in enumerate(top_languages):
+    for index, language in enumerate(
+        languages[:DISPLAY_LANGUAGES]
+    ):
 
         name = escape_xml(
             language["name"]
         )
 
-        percentage = language["percentage"]
+        percentage = language[
+            "percentage"
+        ]
 
         color = language_color(
             language["name"],
             index,
         )
 
-        # REAL percentage-based width.
+        # ----------------------------------------------------
+        # THIS IS THE IMPORTANT PART.
+        #
+        # 74% = 74% of the full bar.
+        # 25% = 25% of the full bar.
+        # 5%  = 5% of the full bar.
+        # ----------------------------------------------------
+
         bar_width = (
             percentage / 100
         ) * bar_max_width
@@ -293,11 +535,12 @@ def generate_language_rows(languages):
 
         y = (
             row_start_y
-            + (index * row_spacing)
+            + index * row_spacing
         )
 
-        rows.append(f"""
-      <!-- {name} -->
+        rows.append(
+            f"""
+      <!-- LANGUAGE: {name} -->
 
       <circle
         cx="66"
@@ -326,7 +569,7 @@ def generate_language_rows(languages):
         fill="#24382b"
       >{format_percentage(percentage)}</text>
 
-      <!-- Background bar -->
+      <!-- Empty bar -->
       <rect
         x="86"
         y="{y + 27}"
@@ -336,7 +579,7 @@ def generate_language_rows(languages):
         fill="#dfcfaa"
       />
 
-      <!-- Actual percentage bar -->
+      <!-- Actual percentage -->
       <rect
         x="86"
         y="{y + 27}"
@@ -345,22 +588,29 @@ def generate_language_rows(languages):
         rx="6.5"
         fill="{color}"
       />
-""")
+"""
+        )
 
-    return "\n".join(rows)
+    return "\n".join(
+        rows
+    )
 
 
 # ============================================================
-# SVG
+# SVG GENERATION
 # ============================================================
 
-def generate_svg(languages, repository_count):
+def generate_svg(
+    languages,
+    repository_count,
+):
 
     rows = generate_language_rows(
         languages
     )
 
     if not rows:
+
         rows = """
       <text
         x="86"
@@ -383,7 +633,7 @@ def generate_svg(languages, repository_count):
 
   <defs>
 
-    <!-- Vintage paper grain -->
+    <!-- Paper texture -->
     <pattern
       id="paper"
       width="80"
@@ -458,7 +708,7 @@ def generate_svg(languages, repository_count):
   </defs>
 
 
-  <!-- Outer dark green -->
+  <!-- Outer background -->
   <rect
     width="1000"
     height="760"
@@ -468,7 +718,7 @@ def generate_svg(languages, repository_count):
 
   <g clip-path="url(#round)">
 
-    <!-- Paper -->
+    <!-- Main paper -->
     <rect
       x="18"
       y="18"
@@ -486,7 +736,7 @@ def generate_svg(languages, repository_count):
     />
 
 
-    <!-- Vintage frame -->
+    <!-- Frame -->
     <rect
       x="18"
       y="18"
@@ -499,7 +749,10 @@ def generate_svg(languages, repository_count):
     />
 
 
-    <!-- Sun -->
+    <!-- ================================================== -->
+    <!-- SUN -->
+    <!-- ================================================== -->
+
     <circle
       cx="865"
       cy="112"
@@ -532,7 +785,10 @@ def generate_svg(languages, repository_count):
     </g>
 
 
-    <!-- Header -->
+    <!-- ================================================== -->
+    <!-- HEADER -->
+    <!-- ================================================== -->
+
     <text
       x="58"
       y="67"
@@ -569,7 +825,7 @@ def generate_svg(languages, repository_count):
     </text>
 
 
-    <!-- Divider -->
+    <!-- Hand-drawn divider -->
     <path
       d="
         M58 111
@@ -586,7 +842,10 @@ def generate_svg(languages, repository_count):
     />
 
 
-    <!-- Title -->
+    <!-- ================================================== -->
+    <!-- TITLE -->
+    <!-- ================================================== -->
+
     <text
       x="55"
       y="185"
@@ -627,8 +886,12 @@ def generate_svg(languages, repository_count):
     </text>
 
 
-    <!-- Flower -->
+    <!-- ================================================== -->
+    <!-- FLOWER -->
+    <!-- ================================================== -->
+
     <g transform="translate(875 230)">
+
       <circle
         cx="0"
         cy="-18"
@@ -670,11 +933,12 @@ def generate_svg(languages, repository_count):
         r="8"
         fill="#c95030"
       />
+
     </g>
 
 
     <!-- ================================================== -->
-    <!-- LANGUAGE ROWS -->
+    <!-- LANGUAGE STACK -->
     <!-- ================================================== -->
 
     {rows}
@@ -761,36 +1025,71 @@ def main():
 
     username = (
         os.environ.get("GITHUB_USERNAME")
-        or os.environ.get("GITHUB_REPOSITORY_OWNER")
+        or os.environ.get(
+            "GITHUB_REPOSITORY_OWNER"
+        )
     )
 
     if not username:
         raise RuntimeError(
-            "GITHUB_USERNAME or GITHUB_REPOSITORY_OWNER "
+            "GITHUB_USERNAME or "
+            "GITHUB_REPOSITORY_OWNER "
             "is required."
         )
 
-    token = os.environ.get("GITHUB_TOKEN")
-
-    print()
-    print("============================================")
-    print("        RETRO LANGUAGE STACK")
-    print("============================================")
-    print()
-
-    print(f"GitHub user: {username}")
-    print()
-
-    languages, repository_count = calculate_languages(
-        username,
-        token,
+    token = os.environ.get(
+        "GITHUB_TOKEN"
     )
 
     print()
-    print("Languages discovered:")
+    print(
+        "============================================"
+    )
+    print(
+        "          LANGUAGE STACK"
+    )
+    print(
+        "============================================"
+    )
+    print()
+
+    print(
+        f"GitHub user: {username}"
+    )
+    print()
+
+    languages, repository_count = (
+        calculate_languages(
+            username,
+            token,
+        )
+    )
+
+    display_languages = (
+        prepare_display_languages(
+            languages
+        )
+    )
+
+    print()
+    print(
+        "All languages discovered:"
+    )
     print()
 
     for language in languages:
+        print(
+            f"{language['name']:25}"
+            f"{language['percentage']:7.2f}%"
+        )
+
+    print()
+    print(
+        "Languages displayed:"
+    )
+    print()
+
+    for language in display_languages:
         print(
             f"{language['name']:25}"
             f"{language['percentage']:7.2f}%"
@@ -804,7 +1103,7 @@ def main():
     print()
 
     svg = generate_svg(
-        languages,
+        display_languages,
         repository_count,
     )
 

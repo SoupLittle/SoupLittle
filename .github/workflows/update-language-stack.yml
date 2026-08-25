@@ -1,12 +1,11 @@
-```yaml
 name: Update Language Stack
 
 on:
-  # Update every other calendar day at 03:17 UTC.
+  # Update every other calendar day.
   schedule:
     - cron: "17 3 */2 * *"
 
-  # Allow you to update it manually whenever you want.
+  # Allow manual updates whenever you want.
   workflow_dispatch:
 
 permissions:
@@ -19,8 +18,6 @@ jobs:
     steps:
       - name: Checkout profile repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -50,13 +47,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add assets/language-stack.svg
-
           git commit -m "chore: update language stack"
-
           git push
 
       - name: Nothing changed
         if: steps.changes.outputs.changed == 'false'
         run: |
           echo "Language stack is already up to date."
-```

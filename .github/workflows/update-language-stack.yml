@@ -1,56 +1,141 @@
 name: Update Language Stack
 
+# ============================================================
+# WHEN SHOULD THIS RUN?
+# ============================================================
+
 on:
-  # Update every other calendar day.
+
+  # ----------------------------------------------------------
+  # Every other calendar day.
+  #
+  # 03:17 UTC is just an arbitrary quiet time.
+  # ----------------------------------------------------------
+
   schedule:
     - cron: "17 3 */2 * *"
 
-  # Allow manual updates whenever you want.
+  # ----------------------------------------------------------
+  # This lets you manually regenerate the card whenever you
+  # want, without having to wait for the scheduled run.
+  # ----------------------------------------------------------
+
   workflow_dispatch:
+
+
+# ============================================================
+# PERMISSIONS
+# ============================================================
 
 permissions:
   contents: write
 
+
+# ============================================================
+# JOB
+# ============================================================
+
 jobs:
+
   update-language-stack:
+
     runs-on: ubuntu-latest
 
+
     steps:
-      - name: Checkout profile repository
+
+      # ------------------------------------------------------
+      # Download the repository.
+      # ------------------------------------------------------
+
+      - name: Checkout repository
+
         uses: actions/checkout@v4
 
+
+      # ------------------------------------------------------
+      # Install Python.
+      # ------------------------------------------------------
+
       - name: Set up Python
+
         uses: actions/setup-python@v5
+
         with:
+
           python-version: "3.x"
 
+
+      # ------------------------------------------------------
+      # Run the Python generator.
+      # ------------------------------------------------------
+
       - name: Generate language stack
+
         env:
+
           GITHUB_USERNAME: ${{ github.repository_owner }}
+
           GITHUB_TOKEN: ${{ github.token }}
+
         run: |
+
           python scripts/update_languages.py
 
+
+      # ------------------------------------------------------
+      # Check whether the SVG actually changed.
+      #
+      # If your languages haven't changed, we don't create a
+      # pointless Git commit.
+      # ------------------------------------------------------
+
       - name: Check for changes
+
         id: changes
+
         run: |
+
           if git diff --quiet -- assets/language-stack.svg; then
+
             echo "changed=false" >> "$GITHUB_OUTPUT"
+
           else
+
             echo "changed=true" >> "$GITHUB_OUTPUT"
+
           fi
 
+
+      # ------------------------------------------------------
+      # Commit the new SVG only if it changed.
+      # ------------------------------------------------------
+
       - name: Commit updated SVG
+
         if: steps.changes.outputs.changed == 'true'
+
         run: |
+
           git config user.name "github-actions[bot]"
+
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add assets/language-stack.svg
+
           git commit -m "chore: update language stack"
+
           git push
 
+
+      # ------------------------------------------------------
+      # Nothing changed.
+      # ------------------------------------------------------
+
       - name: Nothing changed
+
         if: steps.changes.outputs.changed == 'false'
+
         run: |
+
           echo "Language stack is already up to date."

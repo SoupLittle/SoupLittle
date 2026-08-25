@@ -1,98 +1,281 @@
 #!/usr/bin/env python3
 
+"""
+=============================================================
+ LANGUAGE STACK GENERATOR
+=============================================================
+
+This script looks at the languages used across your GitHub
+repositories and generates:
+
+    assets/language-stack.svg
+
+The SVG is then displayed in your README.
+
+IMPORTANT:
+-------------------------------------------------------------
+You normally DO NOT edit language-stack.svg manually.
+
+Instead:
+
+    update_languages.py
+            ↓
+    language-stack.svg
+            ↓
+         README.md
+
+
+The script is intentionally heavily commented so that you can
+change the design yourself later without having to understand
+the entire program.
+
+=============================================================
+"""
+
+
+# =============================================================
+# IMPORTS
+# =============================================================
+
 import json
 import os
 import urllib.parse
 import urllib.request
+
 from pathlib import Path
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-OUTPUT_FILE = Path("assets/language-stack.svg")
-
-# Six rows fit nicely in the current design.
-DISPLAY_LANGUAGES = 6
-
-# These are the languages that best represent Marlene's actual
-# development stack.
+# =============================================================
+# EASY SETTINGS
+# =============================================================
 #
-# They are preferred for DISPLAY, but their percentages are
-# still calculated from the complete language total.
-PREFERRED_LANGUAGES = [
-    "JavaScript",
-    "Python",
-    "HTML",
-    "CSS",
-    "C / C++",
-    "Shell",
-]
+# This is the section I recommend you look at first if you
+# want to customise something later.
+#
+# Most visual changes can be made further down in the file.
+# =============================================================
 
-# Repositories that should not contribute to the statistics.
+
+# -------------------------------------------------------------
+# Where the generated SVG will be saved.
+# -------------------------------------------------------------
+
+OUTPUT_FILE = Path(
+    "assets/language-stack.svg"
+)
+
+
+# -------------------------------------------------------------
+# How many languages should appear?
+#
+# You asked for SIX.
+#
+# Change this to 5, 7, 8, etc. if you ever want to.
+# -------------------------------------------------------------
+
+NUMBER_OF_LANGUAGES = 6
+
+
+# -------------------------------------------------------------
+# GitHub repositories that should NOT be counted.
+#
+# The profile repository itself is normally excluded because
+# otherwise README/configuration files can distort the result.
+#
+# Add more repository names here if there are repositories
+# you don't want included.
+# -------------------------------------------------------------
+
 EXCLUDED_REPOSITORIES = {
     "SoupLittle",
 }
 
 
-# ============================================================
-# LANGUAGE DISPLAY COLORS
-# ============================================================
+# -------------------------------------------------------------
+# C and C++ are combined into one displayed language.
+#
+# This is useful for your ESP32 / embedded projects because
+# GitHub may otherwise give C and C++ two separate rows.
+#
+# If you don't want this behaviour, remove this later.
+# -------------------------------------------------------------
 
-LANGUAGE_COLORS = {
+COMBINE_C_AND_CPP = True
+
+
+# =============================================================
+# COLOUR PALETTE
+# =============================================================
+#
+# This is where you can change the overall look.
+#
+# The colours are deliberately kept close to the vintage
+# cream / terracotta / olive palette from the design.
+#
+# If you want to experiment, THIS is one of the easiest places
+# to start.
+# =============================================================
+
+
+# -------------------------------------------------------------
+# Main background colour.
+# -------------------------------------------------------------
+
+DARK_GREEN = "#24382b"
+
+
+# -------------------------------------------------------------
+# Cream paper colour.
+# -------------------------------------------------------------
+
+PAPER = "#f1e2bd"
+
+
+# -------------------------------------------------------------
+# Main terracotta / orange-red.
+# -------------------------------------------------------------
+
+TERRACOTTA = "#c95030"
+
+
+# -------------------------------------------------------------
+# Darker red used for outlines and small details.
+# -------------------------------------------------------------
+
+DARK_TERRACOTTA = "#8b3f2c"
+
+
+# -------------------------------------------------------------
+# Brown used for text.
+# -------------------------------------------------------------
+
+BROWN = "#5d4935"
+
+
+# -------------------------------------------------------------
+# Muted cream used for footer text.
+# -------------------------------------------------------------
+
+LIGHT_CREAM = "#f5e7c5"
+
+
+# -------------------------------------------------------------
+# Empty portion of the language bars.
+# -------------------------------------------------------------
+
+EMPTY_BAR = "#dfcfaa"
+
+
+# -------------------------------------------------------------
+# Individual language colours.
+#
+# You can change these independently.
+# -------------------------------------------------------------
+
+LANGUAGE_COLOURS = {
+
     "JavaScript": "#d5a83c",
-    "Python": "#8b7352",
+
+    "Python": "#6f795b",
+
     "HTML": "#c66a43",
-    "CSS": "#b9573d",
-    "C / C++": "#65715c",
+
+    "CSS": "#b9633d",
+
+    "C / C++": "#5f715c",
+
     "Shell": "#547a75",
 
-    # Fallbacks for other languages.
     "TypeScript": "#4d7770",
-    "Java": "#a85d42",
-    "C": "#65715c",
-    "C++": "#65715c",
-    "C#": "#68785b",
-    "Go": "#547a75",
-    "Rust": "#865b42",
+
+    "Java": "#9b6549",
+
+    "C#": "#657653",
+
+    "Go": "#527b76",
+
+    "Rust": "#895d45",
+
     "PHP": "#756b79",
+
     "Ruby": "#a95747",
-    "Kotlin": "#8c684d",
+
     "Swift": "#c76b43",
+
+    "Kotlin": "#80654f",
+
     "Dart": "#557b76",
-    "Vue": "#64805c",
+
     "Jupyter Notebook": "#9b7650",
 }
 
-FALLBACK_COLORS = [
+
+# -------------------------------------------------------------
+# If a language isn't listed above, the script will use one
+# of these colours automatically.
+# -------------------------------------------------------------
+
+FALLBACK_COLOURS = [
     "#d5a83c",
-    "#4d7770",
-    "#8b7352",
-    "#b9573d",
+    "#6f795b",
     "#c66a43",
-    "#65715c",
-    "#865b42",
+    "#b9633d",
+    "#5f715c",
+    "#547a75",
 ]
 
 
-# ============================================================
+# =============================================================
 # GITHUB API
-# ============================================================
+# =============================================================
+
 
 def github_request(url, token=None):
     """
     Make a GET request to the GitHub API.
+
+    We use GitHub's language API rather than trying to inspect
+    every file ourselves.
+
+    GitHub returns something roughly like:
+
+        {
+            "JavaScript": 123456,
+            "Python": 45678,
+            "HTML": 12345
+        }
+
+    The numbers represent bytes of code.
     """
 
     headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "SoupLittle-language-stack",
-        "X-GitHub-Api-Version": "2022-11-28",
+        "Accept": (
+            "application/vnd.github+json"
+        ),
+
+        "User-Agent": (
+            "SoupLittle-language-stack"
+        ),
+
+        "X-GitHub-Api-Version": (
+            "2022-11-28"
+        ),
     }
 
+
+    # ---------------------------------------------------------
+    # GitHub Actions gives us a token.
+    #
+    # Using it gives us much better API limits than making
+    # completely unauthenticated requests.
+    # ---------------------------------------------------------
+
     if token:
-        headers["Authorization"] = f"Bearer {token}"
+
+        headers["Authorization"] = (
+            f"Bearer {token}"
+        )
+
 
     request = urllib.request.Request(
         url,
@@ -100,142 +283,245 @@ def github_request(url, token=None):
         method="GET",
     )
 
+
     with urllib.request.urlopen(
         request,
         timeout=30,
     ) as response:
+
         return json.loads(
-            response.read().decode("utf-8")
+            response.read().decode(
+                "utf-8"
+            )
         )
 
 
-def get_all_repositories(username, token=None):
+# =============================================================
+# GET REPOSITORIES
+# =============================================================
+
+
+def get_all_repositories(
+    username,
+    token=None,
+):
     """
-    Get all public repositories owned by the user.
+    Get all repositories owned by the GitHub user.
+
+    GitHub returns repositories in pages.
+    We therefore keep requesting pages until there are no more.
     """
 
     repositories = []
+
     page = 1
+
 
     while True:
 
-        query = urllib.parse.urlencode({
-            "per_page": 100,
-            "page": page,
-            "type": "owner",
-            "sort": "updated",
-        })
+        # -----------------------------------------------------
+        # Ask GitHub for up to 100 repositories at a time.
+        # -----------------------------------------------------
+
+        query = urllib.parse.urlencode(
+            {
+                "per_page": 100,
+                "page": page,
+                "type": "owner",
+                "sort": "updated",
+            }
+        )
+
 
         url = (
-            f"https://api.github.com/users/"
-            f"{urllib.parse.quote(username)}/repos?{query}"
+            "https://api.github.com/users/"
+            f"{urllib.parse.quote(username)}"
+            f"/repos?{query}"
         )
 
+
         print(
-            f"Fetching repositories page {page}..."
+            f"Fetching repository page {page}..."
         )
+
 
         data = github_request(
             url,
             token,
         )
 
+
+        # -----------------------------------------------------
+        # No repositories means we've reached the end.
+        # -----------------------------------------------------
+
         if not data:
             break
 
+
         repositories.extend(data)
+
+
+        # -----------------------------------------------------
+        # If GitHub returned fewer than 100, this was the last
+        # page.
+        # -----------------------------------------------------
 
         if len(data) < 100:
             break
 
+
         page += 1
+
 
     return repositories
 
 
+# =============================================================
+# GET LANGUAGES FOR ONE REPOSITORY
+# =============================================================
+
+
 def get_repository_languages(
     owner,
-    repo,
+    repository,
     token=None,
 ):
     """
-    Get GitHub's byte counts for each language
-    in a repository.
+    Ask GitHub which languages are used in one repository.
+
+    Example response:
+
+        {
+            "JavaScript": 45000,
+            "CSS": 12000,
+            "HTML": 9000
+        }
     """
 
     url = (
-        f"https://api.github.com/repos/"
+        "https://api.github.com/repos/"
         f"{urllib.parse.quote(owner)}/"
-        f"{urllib.parse.quote(repo)}/languages"
+        f"{urllib.parse.quote(repository)}"
+        "/languages"
     )
 
+
     try:
+
         return github_request(
             url,
             token,
         )
 
     except Exception as error:
+
+        # -----------------------------------------------------
+        # One broken/inaccessible repository should not stop
+        # the entire language card from being generated.
+        # -----------------------------------------------------
+
         print(
             f"Could not read languages for "
-            f"{repo}: {error}"
+            f"{repository}: {error}"
         )
+
         return {}
 
 
-# ============================================================
-# LANGUAGE CALCULATION
-# ============================================================
+# =============================================================
+# COLLECT LANGUAGE DATA
+# =============================================================
 
-def calculate_languages(
+
+def calculate_language_totals(
     username,
     token=None,
 ):
     """
-    Scan repositories and aggregate language byte counts.
+    Scan all repositories and add together their language
+    byte counts.
 
-    The percentages are calculated from ALL languages.
+    The result is a dictionary like:
 
-    This is important:
-    the display preferences do NOT change the mathematics.
+        {
+            "JavaScript": 123456,
+            "Python": 45678,
+            "HTML": 12345
+        }
+
+    At this stage we are dealing with BYTES, not percentages.
     """
+
 
     repositories = get_all_repositories(
         username,
         token,
     )
 
+
     totals = {}
-    scanned = 0
+
+    scanned_repositories = 0
+
 
     for repository in repositories:
 
         name = repository["name"]
 
+
+        # -----------------------------------------------------
         # Don't count forks.
-        if repository.get("fork", False):
+        #
+        # Otherwise someone else's project that you forked
+        # could affect your language statistics.
+        # -----------------------------------------------------
+
+        if repository.get(
+            "fork",
+            False,
+        ):
+
             print(
                 f"Skipping fork: {name}"
             )
+
             continue
 
+
+        # -----------------------------------------------------
         # Don't count archived repositories.
-        if repository.get("archived", False):
+        # -----------------------------------------------------
+
+        if repository.get(
+            "archived",
+            False,
+        ):
+
             print(
                 f"Skipping archived: {name}"
             )
+
             continue
 
-        # Don't count the profile repository itself.
+
+        # -----------------------------------------------------
+        # Don't count repositories explicitly excluded above.
+        # -----------------------------------------------------
+
         if name in EXCLUDED_REPOSITORIES:
+
             print(
                 f"Skipping excluded: {name}"
             )
+
             continue
+
 
         print(
             f"Scanning: {name}"
         )
+
 
         languages = get_repository_languages(
             username,
@@ -243,403 +529,687 @@ def calculate_languages(
             token,
         )
 
-        for language, byte_count in languages.items():
+
+        # -----------------------------------------------------
+        # Add each language's byte count to our running total.
+        # -----------------------------------------------------
+
+        for language, byte_count in (
+            languages.items()
+        ):
 
             if not isinstance(
                 byte_count,
                 int,
             ):
+
                 continue
 
+
             totals[language] = (
-                totals.get(language, 0)
+                totals.get(
+                    language,
+                    0,
+                )
                 + byte_count
             )
 
-        scanned += 1
+
+        scanned_repositories += 1
+
+
+    return (
+        totals,
+        scanned_repositories,
+    )
+
+
+# =============================================================
+# COMBINE C + C++
+# =============================================================
+
+
+def combine_cpp_and_c(
+    totals,
+):
+    """
+    Combine C and C++ into:
+
+        C / C++
+
+    This is especially useful for your ESP32 work.
+
+    For example:
+
+        C      10,000 bytes
+        C++    20,000 bytes
+
+    becomes:
+
+        C / C++    30,000 bytes
+
+    If you decide you want C and C++ separately later, simply
+    change:
+
+        COMBINE_C_AND_CPP = True
+
+    to:
+
+        COMBINE_C_AND_CPP = False
+    """
+
+
+    if not COMBINE_C_AND_CPP:
+
+        return totals
+
+
+    c_bytes = totals.get(
+        "C",
+        0,
+    )
+
+
+    cpp_bytes = totals.get(
+        "C++",
+        0,
+    )
+
+
+    # ---------------------------------------------------------
+    # Nothing to combine.
+    # ---------------------------------------------------------
+
+    if (
+        c_bytes == 0
+        and cpp_bytes == 0
+    ):
+
+        return totals
+
+
+    # ---------------------------------------------------------
+    # Create the combined language.
+    # ---------------------------------------------------------
+
+    totals["C / C++"] = (
+        c_bytes
+        + cpp_bytes
+    )
+
+
+    # ---------------------------------------------------------
+    # Remove the original individual entries so they don't
+    # appear as separate languages.
+    # ---------------------------------------------------------
+
+    totals.pop(
+        "C",
+        None,
+    )
+
+    totals.pop(
+        "C++",
+        None,
+    )
+
+
+    return totals
+
+
+# =============================================================
+# CONVERT BYTES → PERCENTAGES
+# =============================================================
+
+
+def calculate_percentages(
+    totals,
+):
+    """
+    Convert byte counts into percentages.
+
+    Example:
+
+        JavaScript = 740 bytes
+        Python     = 140 bytes
+        HTML       = 120 bytes
+
+    Total = 1000 bytes
+
+    becomes:
+
+        JavaScript = 74%
+        Python     = 14%
+        HTML       = 12%
+
+    IMPORTANT:
+    ----------------------------------------------------------
+    We calculate percentages against the TOTAL of ALL
+    languages.
+
+    We do NOT divide by the largest language.
+
+    That is what caused your original 74% bar to visually
+    become a 100% bar.
+    """
+
 
     total_bytes = sum(
         totals.values()
     )
 
+
     if total_bytes <= 0:
-        return [], scanned
 
-    results = []
+        return []
 
-    for language, byte_count in sorted(
-        totals.items(),
-        key=lambda item: item[1],
-        reverse=True,
+
+    languages = []
+
+
+    for language, byte_count in (
+        totals.items()
     ):
 
         percentage = (
-            byte_count / total_bytes
-        ) * 100
-
-        results.append({
-            "name": language,
-            "bytes": byte_count,
-            "percentage": percentage,
-        })
-
-    return results, scanned
-
-
-# ============================================================
-# DISPLAY LANGUAGE SELECTION
-# ============================================================
-
-def prepare_display_languages(
-    languages,
-):
-    """
-    Select the six languages shown on the card.
-
-    Priority:
-
-    1. JavaScript
-    2. Python
-    3. HTML
-    4. CSS
-    5. C / C++ or Shell / another language
-
-    This prevents an irrelevant language from pushing one
-    of Marlene's main technologies off the card.
-    """
-
-    by_name = {
-        item["name"]: item
-        for item in languages
-    }
-
-    # --------------------------------------------------------
-    # Combine C and C++.
-    #
-    # This is particularly useful for ESP32 and embedded
-    # projects where GitHub may split the code between the
-    # two languages.
-    # --------------------------------------------------------
-
-    c_bytes = by_name.get(
-        "C",
-        {"bytes": 0},
-    )["bytes"]
-
-    cpp_bytes = by_name.get(
-        "C++",
-        {"bytes": 0},
-    )["bytes"]
-
-    if c_bytes + cpp_bytes > 0:
-
-        total_bytes = sum(
-            item["bytes"]
-            for item in languages
-        )
-
-        combined_percentage = (
-            (c_bytes + cpp_bytes)
+            byte_count
             / total_bytes
         ) * 100
 
-        c_cpp = {
-            "name": "C / C++",
-            "bytes": c_bytes + cpp_bytes,
-            "percentage": combined_percentage,
-        }
 
-        by_name["C / C++"] = c_cpp
+        languages.append(
+            {
+                "name": language,
 
-    # --------------------------------------------------------
-    # Pick preferred languages that actually exist.
-    # --------------------------------------------------------
+                "bytes": byte_count,
 
-    selected = []
-
-    for preferred in PREFERRED_LANGUAGES:
-
-        if preferred not in by_name:
-            continue
-
-        item = by_name[preferred]
-
-        if item["bytes"] <= 0:
-            continue
-
-        selected.append(item)
-
-        if len(selected) >= DISPLAY_LANGUAGES:
-            break
-
-    # --------------------------------------------------------
-    # If we don't have five preferred languages,
-    # fill remaining slots with the largest other languages.
-    # --------------------------------------------------------
-
-    selected_names = {
-        item["name"]
-        for item in selected
-    }
-
-    remaining = sorted(
-        [
-            item
-            for item in languages
-            if item["name"]
-            not in selected_names
-            and item["name"] not in {
-                "C",
-                "C++",
+                "percentage": percentage,
             }
+        )
+
+
+    # ---------------------------------------------------------
+    # Sort by REAL percentage.
+    #
+    # Highest percentage first.
+    #
+    # This is the important difference from the earlier
+    # preferred-language version.
+    # ---------------------------------------------------------
+
+    languages.sort(
+        key=lambda item: item[
+            "percentage"
         ],
-        key=lambda item: item["bytes"],
         reverse=True,
     )
 
-    for item in remaining:
 
-        if len(selected) >= DISPLAY_LANGUAGES:
-            break
-
-        selected.append(item)
-
-    return selected
+    return languages
 
 
-# ============================================================
-# SVG HELPERS
-# ============================================================
+# =============================================================
+# SELECT THE SIX DISPLAY LANGUAGES
+# =============================================================
+
+
+def select_display_languages(
+    languages,
+):
+    """
+    Pick the six largest languages.
+
+    Because 'languages' has already been sorted from highest
+    percentage to lowest, this is very simple.
+
+    This means the card ALWAYS shows:
+
+        #1 largest
+        #2
+        #3
+        #4
+        #5
+        #6 smallest
+
+    among your meaningful languages.
+
+    No hard-coded ordering is used.
+    """
+
+
+    return languages[
+        :NUMBER_OF_LANGUAGES
+    ]
+
+
+# =============================================================
+# XML / SVG TEXT SAFETY
+# =============================================================
+
 
 def escape_xml(value):
     """
-    Safely escape text for SVG/XML.
+    Escape characters that have special meaning in XML.
+
+    This prevents a language name containing something unusual
+    from breaking the SVG.
     """
 
     return (
         str(value)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
+        .replace(
+            "&",
+            "&amp;",
+        )
+        .replace(
+            "<",
+            "&lt;",
+        )
+        .replace(
+            ">",
+            "&gt;",
+        )
+        .replace(
+            '"',
+            "&quot;",
+        )
+        .replace(
+            "'",
+            "&apos;",
+        )
     )
 
 
-def language_color(
+# =============================================================
+# LANGUAGE COLOUR
+# =============================================================
+
+
+def get_language_colour(
     language,
     index,
 ):
     """
-    Get a color for a language.
+    Return the colour assigned to a language.
+
+    If you add a language to the SVG that isn't in our colour
+    dictionary, a fallback colour is automatically selected.
     """
 
-    if language in LANGUAGE_COLORS:
-        return LANGUAGE_COLORS[
+
+    if language in LANGUAGE_COLOURS:
+
+        return LANGUAGE_COLOURS[
             language
         ]
 
-    return FALLBACK_COLORS[
-        index % len(FALLBACK_COLORS)
+
+    return FALLBACK_COLOURS[
+        index
+        % len(FALLBACK_COLOURS)
     ]
+
+
+# =============================================================
+# PERCENTAGE DISPLAY
+# =============================================================
 
 
 def format_percentage(
     percentage,
 ):
     """
-    Display percentages cleanly.
+    Format the number shown on the right side of each row.
 
     Examples:
-        74.23 -> 74.2%
-        14.00 -> 14.0%
-        0.04  -> <0.1%
+
+        74.2389 → 74.2%
+        14.0000 → 14.0%
+        0.0432  → <0.1%
     """
+
 
     if (
         percentage > 0
         and percentage < 0.1
     ):
+
         return "<0.1%"
+
 
     return (
         f"{percentage:.1f}%"
     )
 
 
-# ============================================================
-# LANGUAGE ROWS
-# ============================================================
+# =============================================================
+# LANGUAGE ROW GENERATOR
+# =============================================================
+
 
 def generate_language_rows(
     languages,
 ):
     """
-    Generate the five language rows.
+    Generate the SVG elements for the six language rows.
+
+    This is one of the BEST places to experiment with the
+    appearance of the card.
+
+    Things you can easily change:
+
+        row_start_y
+        row_spacing
+        bar_max_width
+        bar_height
+        text sizes
+        circle sizes
+
+    ----------------------------------------------------------
 
     IMPORTANT:
-    A 74% language gets 74% of the available bar.
 
-    It is NOT normalized against the largest language.
+    The bar width is calculated like this:
+
+        percentage / 100 * bar_max_width
+
+    So:
+
+        100% = full bar
+         75% = 75% bar
+         50% = half bar
+         10% = small bar
+
+    This means the visual bar represents the actual percentage.
     """
 
+
     if not languages:
+
         return ""
+
 
     rows = []
 
-    # Available width for the actual language bar.
-    bar_max_width = 857
 
-    # The title ends around y=281.
-    row_start_y = 330
+    # ---------------------------------------------------------
+    # Maximum width of the empty language bar.
+    #
+    # Increase this if you want longer bars.
+    # ---------------------------------------------------------
 
-    # Enough vertical spacing for five complete rows.
-    row_spacing = 62
+    bar_max_width = 720
+
+
+    # ---------------------------------------------------------
+    # First language row.
+    #
+    # Increase this number to move the whole language section
+    # further down.
+    # ---------------------------------------------------------
+
+    row_start_y = 400
+
+
+    # ---------------------------------------------------------
+    # Vertical distance between language rows.
+    #
+    # Increase this if you want more breathing room.
+    # ---------------------------------------------------------
+
+    row_spacing = 64
+
+
+    # ---------------------------------------------------------
+    # Height of each bar.
+    # ---------------------------------------------------------
+
+    bar_height = 14
+
 
     for index, language in enumerate(
-        languages[:DISPLAY_LANGUAGES]
+        languages
     ):
 
-        name = escape_xml(
-            language["name"]
-        )
+        language_name = language[
+            "name"
+        ]
+
 
         percentage = language[
             "percentage"
         ]
 
-        color = language_color(
-            language["name"],
+
+        # -----------------------------------------------------
+        # Make the language name XML-safe.
+        # -----------------------------------------------------
+
+        safe_name = escape_xml(
+            language_name
+        )
+
+
+        # -----------------------------------------------------
+        # Choose this language's colour.
+        # -----------------------------------------------------
+
+        colour = get_language_colour(
+            language_name,
             index,
         )
 
-        # ----------------------------------------------------
-        # THIS IS THE IMPORTANT PART.
+
+        # -----------------------------------------------------
+        # Calculate the actual bar width.
         #
-        # 74% = 74% of the full bar.
-        # 25% = 25% of the full bar.
-        # 5%  = 5% of the full bar.
-        # ----------------------------------------------------
+        # THIS MUST use / 100.
+        #
+        # Do NOT change this to:
+        #
+        #     percentage / max_percentage
+        #
+        # because that would turn the largest language into
+        # a visually full bar again.
+        # -----------------------------------------------------
 
         bar_width = (
-            percentage / 100
+            percentage
+            / 100
         ) * bar_max_width
 
-        # Make tiny percentages visible.
+
+        # -----------------------------------------------------
+        # Tiny percentages can otherwise become invisible.
+        #
+        # Give anything above zero a minimum width.
+        # -----------------------------------------------------
+
         if percentage > 0:
+
             bar_width = max(
                 bar_width,
                 8,
             )
+
+
+        # -----------------------------------------------------
+        # Calculate vertical position.
+        # -----------------------------------------------------
 
         y = (
             row_start_y
             + index * row_spacing
         )
 
+
+        # -----------------------------------------------------
+        # Create the SVG for this language.
+        # -----------------------------------------------------
+
         rows.append(
             f"""
-      <!-- LANGUAGE: {name} -->
+    <!-- ================================================ -->
+    <!-- LANGUAGE ROW {index + 1}: {safe_name} -->
+    <!-- ================================================ -->
 
-      <circle
-        cx="66"
-        cy="{y + 10}"
-        r="7"
-        fill="{color}"
-      />
+    <!-- Small coloured dot -->
+    <circle
+      cx="70"
+      cy="{y + 8}"
+      r="7"
+      fill="{colour}"
+    />
 
-      <text
-        x="86"
-        y="{y + 15}"
-        font-family="Arial, sans-serif"
-        font-size="15"
-        font-weight="bold"
-        letter-spacing="1"
-        fill="#24382b"
-      >{name.upper()}</text>
+    <!-- Language name -->
+    <text
+      x="92"
+      y="{y + 13}"
+      font-family="Arial, sans-serif"
+      font-size="16"
+      font-weight="bold"
+      letter-spacing="1"
+      fill="{BROWN}"
+    >{safe_name.upper()}</text>
 
-      <text
-        x="943"
-        y="{y + 15}"
-        text-anchor="end"
-        font-family="Courier New, monospace"
-        font-size="14"
-        font-weight="bold"
-        fill="#24382b"
-      >{format_percentage(percentage)}</text>
+    <!-- Percentage -->
+    <text
+      x="930"
+      y="{y + 13}"
+      text-anchor="end"
+      font-family="Courier New, monospace"
+      font-size="14"
+      font-weight="bold"
+      fill="{BROWN}"
+    >{format_percentage(percentage)}</text>
 
-      <!-- Empty bar -->
-      <rect
-        x="86"
-        y="{y + 27}"
-        width="{bar_max_width}"
-        height="13"
-        rx="6.5"
-        fill="#dfcfaa"
-      />
+    <!-- Empty / background part of bar -->
+    <rect
+      x="92"
+      y="{y + 25}"
+      width="{bar_max_width}"
+      height="{bar_height}"
+      rx="7"
+      fill="{EMPTY_BAR}"
+    />
 
-      <!-- Actual percentage -->
-      <rect
-        x="86"
-        y="{y + 27}"
-        width="{bar_width:.1f}"
-        height="13"
-        rx="6.5"
-        fill="{color}"
-      />
+    <!-- Actual percentage -->
+    <rect
+      x="92"
+      y="{y + 25}"
+      width="{bar_width:.1f}"
+      height="{bar_height}"
+      rx="7"
+      fill="{colour}"
+    />
 """
         )
+
 
     return "\n".join(
         rows
     )
 
 
-# ============================================================
-# SVG GENERATION
-# ============================================================
+# =============================================================
+# SVG GENERATOR
+# =============================================================
+
 
 def generate_svg(
     languages,
     repository_count,
 ):
+    """
+    Build the complete SVG image.
 
-    rows = generate_language_rows(
-        languages
+    This is basically the HTML/CSS equivalent of the image
+    you're designing, except SVG can be displayed directly
+    inside your GitHub README.
+    """
+
+
+    language_rows = (
+        generate_language_rows(
+            languages
+        )
     )
 
-    if not rows:
 
-        rows = """
-      <text
-        x="86"
-        y="350"
-        font-family="Georgia, serif"
-        font-size="24"
-        font-weight="bold"
-        fill="#24382b"
-      >
-        Nothing growing yet...
-      </text>
+    # ---------------------------------------------------------
+    # If there are no languages, show a friendly message.
+    # ---------------------------------------------------------
+
+    if not language_rows:
+
+        language_rows = """
+    <text
+      x="92"
+      y="420"
+      font-family="Georgia, serif"
+      font-size="24"
+      font-weight="bold"
+      fill="#5d4935"
+    >
+      Nothing growing yet...
+    </text>
 """
 
+
+    # ---------------------------------------------------------
+    # IMPORTANT DESIGN SETTINGS
+    # ---------------------------------------------------------
+    #
+    # The SVG is deliberately tall enough for:
+    #
+    #   Header
+    #   About section
+    #   Six language rows
+    #   Quote
+    #   Three feature areas
+    #   Footer
+    #
+    # If you add more sections later, increase HEIGHT.
+    # ---------------------------------------------------------
+
+    WIDTH = 1000
+
+    HEIGHT = 940
+
+
+    # ---------------------------------------------------------
+    # Footer position.
+    #
+    # If you make the language rows taller, move this down.
+    # ---------------------------------------------------------
+
+    FOOTER_Y = 855
+
+
     return f"""<svg
-  width="1000"
-  height="760"
-  viewBox="0 0 1000 760"
+  width="{WIDTH}"
+  height="{HEIGHT}"
+  viewBox="0 0 {WIDTH} {HEIGHT}"
   xmlns="http://www.w3.org/2000/svg"
 >
 
+  <!-- ===================================================== -->
+  <!-- DEFINITIONS                                            -->
+  <!-- ===================================================== -->
+
   <defs>
 
-    <!-- Paper texture -->
+    <!-- --------------------------------------------------- -->
+    <!-- Paper texture                                        -->
+    <!-- --------------------------------------------------- -->
+
     <pattern
-      id="paper"
+      id="paperTexture"
       width="80"
       height="80"
       patternUnits="userSpaceOnUse"
     >
+
       <circle
         cx="8"
         cy="12"
@@ -677,209 +1247,182 @@ def generate_svg(
         stroke="#6f5138"
         opacity=".07"
       />
+
     </pattern>
 
-    <!-- Footer texture -->
+
+    <!-- --------------------------------------------------- -->
+    <!-- Footer dot texture                                   -->
+    <!-- --------------------------------------------------- -->
+
     <pattern
-      id="dots"
+      id="footerDots"
       width="18"
       height="18"
       patternUnits="userSpaceOnUse"
     >
+
       <circle
         cx="2"
         cy="2"
         r="1.1"
         fill="#f6e9ca"
-        opacity=".22"
+        opacity=".20"
       />
+
     </pattern>
 
-    <clipPath id="round">
+
+    <!-- --------------------------------------------------- -->
+    <!-- Rounded clipping area                                -->
+    <!-- --------------------------------------------------- -->
+
+    <clipPath id="roundedCard">
+
       <rect
-        x="18"
-        y="18"
-        width="964"
-        height="724"
-        rx="18"
+        x="20"
+        y="20"
+        width="960"
+        height="{HEIGHT - 40}"
+        rx="22"
       />
+
     </clipPath>
 
   </defs>
 
 
-  <!-- Outer background -->
+  <!-- ===================================================== -->
+  <!-- OUTER BACKGROUND                                      -->
+  <!-- ===================================================== -->
+
   <rect
-    width="1000"
-    height="760"
-    fill="#24382b"
+    width="{WIDTH}"
+    height="{HEIGHT}"
+    fill="{DARK_GREEN}"
   />
 
 
-  <g clip-path="url(#round)">
+  <!-- ===================================================== -->
+  <!-- CARD                                                   -->
+  <!-- ===================================================== -->
 
-    <!-- Main paper -->
+  <g clip-path="url(#roundedCard)">
+
+    <!-- --------------------------------------------------- -->
+    <!-- Main cream paper                                    -->
+    <!-- --------------------------------------------------- -->
+
     <rect
-      x="18"
-      y="18"
-      width="964"
-      height="724"
-      fill="#f1e2bd"
+      x="20"
+      y="20"
+      width="960"
+      height="{HEIGHT - 40}"
+      fill="{PAPER}"
     />
 
+    <!-- Paper grain -->
     <rect
-      x="18"
-      y="18"
-      width="964"
-      height="724"
-      fill="url(#paper)"
+      x="20"
+      y="20"
+      width="960"
+      height="{HEIGHT - 40}"
+      fill="url(#paperTexture)"
     />
 
 
-    <!-- Frame -->
-    <rect
-      x="18"
-      y="18"
-      width="964"
-      height="724"
-      fill="none"
-      stroke="#c95231"
-      stroke-width="7"
-      opacity=".8"
-    />
-
-
-    <!-- ================================================== -->
-    <!-- SUN -->
-    <!-- ================================================== -->
-
-    <circle
-      cx="865"
-      cy="112"
-      r="76"
-      fill="#d9a83c"
-      opacity=".18"
-    />
-
-    <circle
-      cx="865"
-      cy="112"
-      r="52"
-      fill="#d9a83c"
-      opacity=".15"
-    />
-
-    <g
-      stroke="#c95231"
-      stroke-width="5"
-      opacity=".16"
-    >
-      <path d="M865 20V55"/>
-      <path d="M865 169V204"/>
-      <path d="M773 112H808"/>
-      <path d="M922 112H957"/>
-      <path d="M800 47L825 72"/>
-      <path d="M905 152L930 177"/>
-      <path d="M930 47L905 72"/>
-      <path d="M825 152L800 177"/>
-    </g>
-
-
-    <!-- ================================================== -->
-    <!-- HEADER -->
-    <!-- ================================================== -->
+    <!-- =================================================== -->
+    <!-- HEADER                                               -->
+    <!-- =================================================== -->
 
     <text
-      x="58"
-      y="67"
+      x="55"
+      y="70"
       font-family="Georgia, 'Times New Roman', serif"
-      font-size="17"
+      font-size="22"
       font-weight="bold"
       letter-spacing="3"
-      fill="#b64b2d"
+      fill="{TERRACOTTA}"
     >
       MY DIGITAL GARDEN
     </text>
 
+
     <text
-      x="944"
-      y="70"
+      x="57"
+      y="94"
+      font-family="Courier New, monospace"
+      font-size="11"
+      letter-spacing="1.5"
+      fill="{BROWN}"
+    >
+      BUILD · LEARN · AUTOMATE
+    </text>
+
+
+    <text
+      x="945"
+      y="72"
       text-anchor="end"
       font-family="Courier New, monospace"
       font-size="11"
       letter-spacing="1"
-      fill="#6d5038"
+      fill="{BROWN}"
     >
-      EST. 2021
+      EST. 2023
     </text>
 
 
     <!-- Hand-drawn divider -->
     <path
       d="
-        M58 111
-        C120 106 160 115 220 110
-        S330 113 390 109
-        S510 113 570 109
-        S700 114 760 109
-        S850 113 944 109
+        M55 115
+        C130 110 190 118 260 113
+        S390 117 470 112
+        S620 117 700 113
+        S830 117 945 112
       "
       fill="none"
-      stroke="#b64b2d"
+      stroke="{TERRACOTTA}"
       stroke-width="2"
-      opacity=".65"
+      opacity=".7"
     />
 
 
-    <!-- ================================================== -->
-    <!-- TITLE -->
-    <!-- ================================================== -->
+    <!-- =================================================== -->
+    <!-- ABOUT / INTRO                                       -->
+    <!-- =================================================== -->
 
     <text
       x="55"
-      y="185"
+      y="180"
       font-family="Georgia, 'Times New Roman', serif"
-      font-size="68"
+      font-size="62"
       font-weight="900"
       letter-spacing="-3"
-      fill="#c95030"
-      stroke="#7b3f2d"
-      stroke-width="1"
+      fill="{TERRACOTTA}"
     >
-      LANGUAGE
+      ABOUT ME
     </text>
 
-    <text
-      x="55"
-      y="250"
-      font-family="Georgia, 'Times New Roman', serif"
-      font-size="68"
-      font-weight="900"
-      letter-spacing="-3"
-      fill="#c95030"
-      stroke="#7b3f2d"
-      stroke-width="1"
-    >
-      STACK
-    </text>
 
     <text
-      x="60"
-      y="281"
+      x="58"
+      y="220"
       font-family="Courier New, monospace"
       font-size="13"
-      fill="#6d5038"
+      fill="{BROWN}"
       letter-spacing="1"
     >
-      WHAT'S GROWING IN MY REPOSITORIES
+      A PASSIONATE DEVELOPER · MAKER · PROBLEM SOLVER
     </text>
 
 
-    <!-- ================================================== -->
-    <!-- FLOWER -->
-    <!-- ================================================== -->
+    <!-- --------------------------------------------------- -->
+    <!-- Small decorative flower                             -->
+    <!-- --------------------------------------------------- -->
 
-    <g transform="translate(875 230)">
+    <g transform="translate(900 175)">
 
       <circle
         cx="0"
@@ -920,68 +1463,145 @@ def generate_svg(
         cx="0"
         cy="0"
         r="8"
-        fill="#c95030"
+        fill="{TERRACOTTA}"
       />
 
     </g>
 
 
-    <!-- ================================================== -->
-    <!-- LANGUAGE STACK -->
-    <!-- ================================================== -->
+    <!-- =================================================== -->
+    <!-- LANGUAGE STACK                                      -->
+    <!-- =================================================== -->
 
-    {rows}
+    <text
+      x="55"
+      y="300"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="53"
+      font-weight="900"
+      letter-spacing="-2"
+      fill="{TERRACOTTA}"
+    >
+      LANGUAGE
+    </text>
 
 
-    <!-- ================================================== -->
-    <!-- FOOTER -->
-    <!-- ================================================== -->
+    <text
+      x="55"
+      y="352"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="53"
+      font-weight="900"
+      letter-spacing="-2"
+      fill="{TERRACOTTA}"
+    >
+      STACK
+    </text>
 
-    <path
-      d="M18 650H982V742H18Z"
-      fill="#c95030"
-    />
-
-    <rect
-      x="18"
-      y="650"
-      width="964"
-      height="92"
-      fill="url(#dots)"
-    />
 
     <text
       x="58"
-      y="682"
+      y="375"
+      font-family="Courier New, monospace"
+      font-size="11"
+      fill="{BROWN}"
+      letter-spacing="1"
+    >
+      WHAT'S GROWING IN MY REPOSITORIES
+    </text>
+
+
+    <!-- --------------------------------------------------- -->
+    <!-- The six automatically generated rows go here.       -->
+    <!-- --------------------------------------------------- -->
+
+    {language_rows}
+
+
+    <!-- =================================================== -->
+    <!-- DIVIDER                                             -->
+    <!-- =================================================== -->
+
+    <path
+      d="M55 {FOOTER_Y - 55} H945"
+      stroke="{TERRACOTTA}"
+      stroke-width="2"
+      opacity=".7"
+    />
+
+
+    <!-- =================================================== -->
+    <!-- SMALL DEVELOPER QUOTE                               -->
+    <!-- =================================================== -->
+
+    <text
+      x="55"
+      y="{FOOTER_Y - 25}"
       font-family="Georgia, 'Times New Roman', serif"
-      font-size="23"
+      font-size="18"
+      font-style="italic"
+      fill="{BROWN}"
+    >
+      “Build things. Break things. Learn from both.”
+    </text>
+
+
+    <!-- =================================================== -->
+    <!-- FOOTER                                              -->
+    <!-- =================================================== -->
+
+    <rect
+      x="20"
+      y="{FOOTER_Y}"
+      width="960"
+      height="{HEIGHT - FOOTER_Y}"
+      fill="{TERRACOTTA}"
+    />
+
+
+    <!-- Footer texture -->
+    <rect
+      x="20"
+      y="{FOOTER_Y}"
+      width="960"
+      height="{HEIGHT - FOOTER_Y}"
+      fill="url(#footerDots)"
+    />
+
+
+    <text
+      x="55"
+      y="{FOOTER_Y + 42}"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="24"
       font-weight="bold"
-      fill="#f5e7c5"
+      fill="{LIGHT_CREAM}"
     >
       MADE WITH CURIOSITY
     </text>
 
+
     <text
-      x="58"
-      y="709"
+      x="55"
+      y="{FOOTER_Y + 67}"
       font-family="Courier New, monospace"
-      font-size="15"
+      font-size="11"
       letter-spacing="1"
-      fill="#f5e7c5"
+      fill="{LIGHT_CREAM}"
       opacity=".9"
     >
       CULTIVATED ACROSS {repository_count} GITHUB REPOSITORIES
     </text>
 
+
+    <!-- Decorative star -->
     <text
-      x="942"
-      y="704"
-      text-anchor="end"
-      font-family="Georgia, 'Times New Roman', serif"
-      font-size="33"
-      font-weight="bold"
-      font-style="italic"
-      fill="#f5e7c5"
+      x="935"
+      y="{FOOTER_Y + 55}"
+      text-anchor="middle"
+      font-family="Georgia, serif"
+      font-size="30"
+      fill="{LIGHT_CREAM}"
     >
       ✦
     </text>
@@ -989,128 +1609,230 @@ def generate_svg(
   </g>
 
 
-  <!-- Outer border -->
+  <!-- ===================================================== -->
+  <!-- OUTER BORDER                                          -->
+  <!-- ===================================================== -->
+
   <rect
-    x="18"
-    y="18"
-    width="964"
-    height="724"
-    rx="18"
+    x="20"
+    y="20"
+    width="960"
+    height="{HEIGHT - 40}"
+    rx="22"
     fill="none"
-    stroke="#f1e2bd"
+    stroke="{LIGHT_CREAM}"
     stroke-width="3"
-    opacity=".8"
+    opacity=".9"
   />
 
 </svg>
 """
 
 
-# ============================================================
-# MAIN
-# ============================================================
+# =============================================================
+# MAIN PROGRAM
+# =============================================================
+
 
 def main():
+    """
+    Main entry point.
+
+    GitHub Actions supplies:
+
+        GITHUB_USERNAME
+        GITHUB_TOKEN
+
+    The script can also be run locally if those environment
+    variables are supplied.
+    """
+
+
+    # ---------------------------------------------------------
+    # Get the GitHub username.
+    # ---------------------------------------------------------
 
     username = (
-        os.environ.get("GITHUB_USERNAME")
+        os.environ.get(
+            "GITHUB_USERNAME"
+        )
         or os.environ.get(
             "GITHUB_REPOSITORY_OWNER"
         )
     )
 
+
     if not username:
+
         raise RuntimeError(
             "GITHUB_USERNAME or "
             "GITHUB_REPOSITORY_OWNER "
-            "is required."
+            "must be set."
         )
+
+
+    # ---------------------------------------------------------
+    # GitHub Actions automatically provides GITHUB_TOKEN.
+    # ---------------------------------------------------------
 
     token = os.environ.get(
         "GITHUB_TOKEN"
     )
 
+
     print()
     print(
-        "============================================"
+        "=========================================="
     )
+
     print(
-        "          LANGUAGE STACK"
+        "       SOUPLITTLE LANGUAGE STACK"
     )
+
     print(
-        "============================================"
+        "=========================================="
     )
+
     print()
 
     print(
         f"GitHub user: {username}"
     )
+
     print()
 
-    languages, repository_count = (
-        calculate_languages(
+
+    # =========================================================
+    # 1. COLLECT LANGUAGE DATA
+    # =========================================================
+
+    totals, repository_count = (
+        calculate_language_totals(
             username,
             token,
         )
     )
 
+
+    # =========================================================
+    # 2. COMBINE C + C++
+    # =========================================================
+
+    totals = combine_cpp_and_c(
+        totals
+    )
+
+
+    # =========================================================
+    # 3. CALCULATE REAL PERCENTAGES
+    # =========================================================
+
+    languages = calculate_percentages(
+        totals
+    )
+
+
+    # =========================================================
+    # 4. TAKE THE TOP SIX
+    # =========================================================
+
     display_languages = (
-        prepare_display_languages(
+        select_display_languages(
             languages
         )
     )
 
+
+    # =========================================================
+    # DEBUG OUTPUT
+    # =========================================================
+    #
+    # This is useful when the GitHub Action runs.
+    #
+    # You can look at the Action log and see exactly what
+    # GitHub thinks your language percentages are.
+    # =========================================================
+
     print()
     print(
-        "All languages discovered:"
+        "All detected languages:"
     )
+
     print()
+
 
     for language in languages:
+
         print(
-            f"{language['name']:25}"
-            f"{language['percentage']:7.2f}%"
+            f"  {language['name']:<20}"
+            f"{language['percentage']:>7.2f}%"
         )
+
 
     print()
     print(
-        "Languages displayed:"
+        "Languages shown on the card:"
     )
+
     print()
 
-    for language in display_languages:
+
+    for index, language in enumerate(
+        display_languages,
+        start=1,
+    ):
+
         print(
-            f"{language['name']:25}"
-            f"{language['percentage']:7.2f}%"
+            f"  {index}. "
+            f"{language['name']:<18}"
+            f"{language['percentage']:>7.2f}%"
         )
 
+
     print()
-    print(
-        f"Repositories scanned: "
-        f"{repository_count}"
-    )
-    print()
+
+
+    # =========================================================
+    # 5. GENERATE SVG
+    # =========================================================
 
     svg = generate_svg(
         display_languages,
         repository_count,
     )
 
+
+    # ---------------------------------------------------------
+    # Make sure the assets directory exists.
+    # ---------------------------------------------------------
+
     OUTPUT_FILE.parent.mkdir(
         parents=True,
         exist_ok=True,
     )
+
+
+    # ---------------------------------------------------------
+    # Write the generated SVG.
+    # ---------------------------------------------------------
 
     OUTPUT_FILE.write_text(
         svg,
         encoding="utf-8",
     )
 
+
     print(
         f"Generated: {OUTPUT_FILE}"
     )
+
     print()
 
 
+# =============================================================
+# RUN SCRIPT
+# =============================================================
+
 if __name__ == "__main__":
+
     main()

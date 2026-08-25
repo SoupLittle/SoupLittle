@@ -8,7 +8,7 @@ Welcome to Marlene's GitHub account! Here you will find a collection of reposito
 <img
   src="./assets/language-stack.svg"
   alt="My GitHub language stack"
-  width="850"
+  width="100%"
 />
 
 <br>

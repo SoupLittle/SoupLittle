@@ -15,7 +15,6 @@ OUTPUT_FILE = Path("assets/language-stack.svg")
 
 TOP_LANGUAGES = 5
 
-# Change these if you want different colors.
 LANGUAGE_COLORS = {
     "JavaScript": "#d5a83c",
     "TypeScript": "#4d7770",
@@ -38,10 +37,9 @@ LANGUAGE_COLORS = {
     "Jupyter Notebook": "#9b7650",
 }
 
-DEFAULT_COLOR = "#78634e"
-
-# Repositories you don't want included.
-EXCLUDED_REPOSITORIES = set()
+EXCLUDED_REPOSITORIES = {
+    "SoupLittle",
+}
 
 
 # ============================================================
@@ -49,13 +47,9 @@ EXCLUDED_REPOSITORIES = set()
 # ============================================================
 
 def github_request(url, token=None):
-    """
-    Make a GET request to GitHub's API.
-    """
-
     headers = {
         "Accept": "application/vnd.github+json",
-        "User-Agent": "github-language-stack",
+        "User-Agent": "SoupLittle-language-stack",
         "X-GitHub-Api-Version": "2022-11-28",
     }
 
@@ -68,15 +62,13 @@ def github_request(url, token=None):
         method="GET",
     )
 
-    with urllib.request.urlopen(request) as response:
-        return json.loads(response.read().decode("utf-8"))
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(
+            response.read().decode("utf-8")
+        )
 
 
 def get_all_repositories(username, token=None):
-    """
-    Fetch every public repository belonging to the user.
-    """
-
     repositories = []
     page = 1
 
@@ -88,7 +80,10 @@ def get_all_repositories(username, token=None):
             "sort": "updated",
         })
 
-        url = f"https://api.github.com/users/{username}/repos?{query}"
+        url = (
+            f"https://api.github.com/users/"
+            f"{urllib.parse.quote(username)}/repos?{query}"
+        )
 
         print(f"Fetching repositories page {page}...")
 
@@ -108,49 +103,47 @@ def get_all_repositories(username, token=None):
 
 
 def get_repository_languages(owner, repo, token=None):
-    """
-    Get language byte counts for a repository.
-    """
-
-    url = f"https://api.github.com/repos/{owner}/{repo}/languages"
+    url = (
+        f"https://api.github.com/repos/"
+        f"{urllib.parse.quote(owner)}/"
+        f"{urllib.parse.quote(repo)}/languages"
+    )
 
     try:
         return github_request(url, token)
+
     except Exception as error:
-        print(f"Could not read languages for {repo}: {error}")
+        print(
+            f"Could not read languages for {repo}: {error}"
+        )
         return {}
 
 
 # ============================================================
-# DATA PROCESSING
+# LANGUAGE CALCULATION
 # ============================================================
 
 def calculate_languages(username, token=None):
-    """
-    Scan repositories and aggregate language byte counts.
-    """
-
-    repositories = get_all_repositories(username, token)
+    repositories = get_all_repositories(
+        username,
+        token,
+    )
 
     totals = {}
-
     scanned = 0
 
     for repository in repositories:
 
         name = repository["name"]
 
-        # Don't include forks.
         if repository.get("fork", False):
             print(f"Skipping fork: {name}")
             continue
 
-        # Don't include archived repositories.
         if repository.get("archived", False):
             print(f"Skipping archived repository: {name}")
             continue
 
-        # Don't include excluded repositories.
         if name in EXCLUDED_REPOSITORIES:
             print(f"Skipping excluded repository: {name}")
             continue
@@ -163,8 +156,15 @@ def calculate_languages(username, token=None):
             token,
         )
 
-        for language, bytes_count in languages.items():
-            totals[language] = totals.get(language, 0) + bytes_count
+        for language, byte_count in languages.items():
+
+            if not isinstance(byte_count, int):
+                continue
+
+            totals[language] = (
+                totals.get(language, 0)
+                + byte_count
+            )
 
         scanned += 1
 
@@ -182,7 +182,10 @@ def calculate_languages(username, token=None):
     results = []
 
     for language, byte_count in sorted_languages:
-        percentage = (byte_count / total_bytes) * 100
+
+        percentage = (
+            byte_count / total_bytes
+        ) * 100
 
         results.append({
             "name": language,
@@ -194,14 +197,10 @@ def calculate_languages(username, token=None):
 
 
 # ============================================================
-# SVG GENERATION
+# SVG HELPERS
 # ============================================================
 
 def escape_xml(value):
-    """
-    Prevent XML injection / malformed SVG.
-    """
-
     return (
         str(value)
         .replace("&", "&amp;")
@@ -213,10 +212,6 @@ def escape_xml(value):
 
 
 def language_color(language, index):
-    """
-    Get a retro color for a language.
-    """
-
     if language in LANGUAGE_COLORS:
         return LANGUAGE_COLORS[language]
 
@@ -230,34 +225,53 @@ def language_color(language, index):
         "#865b42",
     ]
 
-    return fallback_colors[index % len(fallback_colors)]
+    return fallback_colors[
+        index % len(fallback_colors)
+    ]
 
+
+def format_percentage(value):
+    if value > 0 and value < 0.1:
+        return "<0.1%"
+
+    return f"{value:.1f}%"
+
+
+# ============================================================
+# LANGUAGE ROWS
+# ============================================================
 
 def generate_language_rows(languages):
-    """
-    Generate SVG rows for the top languages.
-    """
 
     rows = []
 
-    top = languages[:TOP_LANGUAGES]
+    top_languages = languages[:TOP_LANGUAGES]
 
-    if not top:
+    if not top_languages:
         return ""
 
-    # Find the largest percentage.
-    max_percentage = max(
-        language["percentage"]
-        for language in top
-    )
+    # IMPORTANT:
+    #
+    # The bar represents the REAL percentage.
+    #
+    # 74% -> 74% of the available bar width
+    # 20% -> 20% of the available bar width
+    # 5%  -> 5% of the available bar width
+    #
+    # We DO NOT normalize against the largest language.
 
-    # Prevent extremely tiny bars.
-    if max_percentage <= 0:
-        max_percentage = 1
+    bar_max_width = 857
 
-    for index, language in enumerate(top):
+    # More vertical room than before.
+    row_start_y = 330
+    row_spacing = 62
 
-        name = escape_xml(language["name"])
+    for index, language in enumerate(top_languages):
+
+        name = escape_xml(
+            language["name"]
+        )
+
         percentage = language["percentage"]
 
         color = language_color(
@@ -265,20 +279,26 @@ def generate_language_rows(languages):
             index,
         )
 
-        # SVG bar dimensions.
-        bar_max_width = 857
-
+        # REAL percentage-based width.
         bar_width = (
-            percentage / max_percentage
+            percentage / 100
         ) * bar_max_width
 
-        # Minimum visual width.
-        bar_width = max(bar_width, 12)
+        # Make tiny percentages visible.
+        if percentage > 0:
+            bar_width = max(
+                bar_width,
+                8,
+            )
 
-        y = 320 + (index * 59)
+        y = (
+            row_start_y
+            + (index * row_spacing)
+        )
 
         rows.append(f"""
       <!-- {name} -->
+
       <circle
         cx="66"
         cy="{y + 10}"
@@ -304,17 +324,19 @@ def generate_language_rows(languages):
         font-size="14"
         font-weight="bold"
         fill="#24382b"
-      >{percentage:.0f}%</text>
+      >{format_percentage(percentage)}</text>
 
+      <!-- Background bar -->
       <rect
         x="86"
         y="{y + 27}"
-        width="857"
+        width="{bar_max_width}"
         height="13"
         rx="6.5"
         fill="#dfcfaa"
       />
 
+      <!-- Actual percentage bar -->
       <rect
         x="86"
         y="{y + 27}"
@@ -328,12 +350,15 @@ def generate_language_rows(languages):
     return "\n".join(rows)
 
 
-def generate_svg(languages, repository_count):
-    """
-    Generate the complete retro SVG.
-    """
+# ============================================================
+# SVG
+# ============================================================
 
-    rows = generate_language_rows(languages)
+def generate_svg(languages, repository_count):
+
+    rows = generate_language_rows(
+        languages
+    )
 
     if not rows:
         rows = """
@@ -351,8 +376,8 @@ def generate_svg(languages, repository_count):
 
     return f"""<svg
   width="1000"
-  height="560"
-  viewBox="0 0 1000 560"
+  height="760"
+  viewBox="0 0 1000 760"
   xmlns="http://www.w3.org/2000/svg"
 >
 
@@ -365,19 +390,46 @@ def generate_svg(languages, repository_count):
       height="80"
       patternUnits="userSpaceOnUse"
     >
-      <circle cx="8" cy="12" r="1.2"
-        fill="#6f5138" opacity=".10"/>
-      <circle cx="42" cy="25" r="1"
-        fill="#6f5138" opacity=".08"/>
-      <circle cx="67" cy="61" r="1.3"
-        fill="#6f5138" opacity=".09"/>
-      <circle cx="22" cy="70" r=".8"
-        fill="#6f5138" opacity=".08"/>
-      <path d="M4 43l2 1M55 8l2-1M72 36l1 2"
-        stroke="#6f5138" opacity=".07"/>
+      <circle
+        cx="8"
+        cy="12"
+        r="1.2"
+        fill="#6f5138"
+        opacity=".10"
+      />
+
+      <circle
+        cx="42"
+        cy="25"
+        r="1"
+        fill="#6f5138"
+        opacity=".08"
+      />
+
+      <circle
+        cx="67"
+        cy="61"
+        r="1.3"
+        fill="#6f5138"
+        opacity=".09"
+      />
+
+      <circle
+        cx="22"
+        cy="70"
+        r=".8"
+        fill="#6f5138"
+        opacity=".08"
+      />
+
+      <path
+        d="M4 43l2 1M55 8l2-1M72 36l1 2"
+        stroke="#6f5138"
+        opacity=".07"
+      />
     </pattern>
 
-    <!-- Print texture -->
+    <!-- Footer texture -->
     <pattern
       id="dots"
       width="18"
@@ -398,19 +450,21 @@ def generate_svg(languages, repository_count):
         x="18"
         y="18"
         width="964"
-        height="524"
+        height="724"
         rx="18"
       />
     </clipPath>
 
   </defs>
 
-  <!-- Dark green outer background -->
+
+  <!-- Outer dark green -->
   <rect
     width="1000"
-    height="560"
+    height="760"
     fill="#24382b"
   />
+
 
   <g clip-path="url(#round)">
 
@@ -419,7 +473,7 @@ def generate_svg(languages, repository_count):
       x="18"
       y="18"
       width="964"
-      height="524"
+      height="724"
       fill="#f1e2bd"
     />
 
@@ -427,21 +481,23 @@ def generate_svg(languages, repository_count):
       x="18"
       y="18"
       width="964"
-      height="524"
+      height="724"
       fill="url(#paper)"
     />
 
-    <!-- Vintage orange frame -->
+
+    <!-- Vintage frame -->
     <rect
       x="18"
       y="18"
       width="964"
-      height="524"
+      height="724"
       fill="none"
       stroke="#c95231"
       stroke-width="7"
       opacity=".8"
     />
+
 
     <!-- Sun -->
     <circle
@@ -460,7 +516,6 @@ def generate_svg(languages, repository_count):
       opacity=".15"
     />
 
-    <!-- Sun rays -->
     <g
       stroke="#c95231"
       stroke-width="5"
@@ -475,6 +530,7 @@ def generate_svg(languages, repository_count):
       <path d="M930 47L905 72"/>
       <path d="M825 152L800 177"/>
     </g>
+
 
     <!-- Header -->
     <text
@@ -512,7 +568,8 @@ def generate_svg(languages, repository_count):
       EST. 2023
     </text>
 
-    <!-- Hand-drawn divider -->
+
+    <!-- Divider -->
     <path
       d="
         M58 111
@@ -527,6 +584,7 @@ def generate_svg(languages, repository_count):
       stroke-width="2"
       opacity=".65"
     />
+
 
     <!-- Title -->
     <text
@@ -568,36 +626,80 @@ def generate_svg(languages, repository_count):
       WHAT'S GROWING IN MY REPOSITORIES
     </text>
 
+
     <!-- Flower -->
     <g transform="translate(875 230)">
-      <circle cx="0" cy="-18" r="13" fill="#d7a53a"/>
-      <circle cx="17" cy="-6" r="13" fill="#d7a53a"/>
-      <circle cx="11" cy="14" r="13" fill="#d7a53a"/>
-      <circle cx="-11" cy="14" r="13" fill="#d7a53a"/>
-      <circle cx="-17" cy="-6" r="13" fill="#d7a53a"/>
-      <circle cx="0" cy="0" r="8" fill="#c95030"/>
+      <circle
+        cx="0"
+        cy="-18"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="17"
+        cy="-6"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="11"
+        cy="14"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="-11"
+        cy="14"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="-17"
+        cy="-6"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="0"
+        cy="0"
+        r="8"
+        fill="#c95030"
+      />
     </g>
 
-    <!-- Language rows -->
+
+    <!-- ================================================== -->
+    <!-- LANGUAGE ROWS -->
+    <!-- ================================================== -->
+
     {rows}
 
-    <!-- Footer -->
+
+    <!-- ================================================== -->
+    <!-- FOOTER -->
+    <!-- ================================================== -->
+
     <path
-      d="M18 455H982V542H18Z"
+      d="M18 650H982V742H18Z"
       fill="#c95030"
     />
 
     <rect
       x="18"
-      y="455"
+      y="650"
       width="964"
-      height="87"
+      height="92"
       fill="url(#dots)"
     />
 
     <text
       x="58"
-      y="485"
+      y="682"
       font-family="Georgia, 'Times New Roman', serif"
       font-size="23"
       font-weight="bold"
@@ -608,7 +710,7 @@ def generate_svg(languages, repository_count):
 
     <text
       x="58"
-      y="509"
+      y="709"
       font-family="Courier New, monospace"
       font-size="11"
       letter-spacing="1"
@@ -620,7 +722,7 @@ def generate_svg(languages, repository_count):
 
     <text
       x="942"
-      y="500"
+      y="704"
       text-anchor="end"
       font-family="Georgia, 'Times New Roman', serif"
       font-size="29"
@@ -633,12 +735,13 @@ def generate_svg(languages, repository_count):
 
   </g>
 
+
   <!-- Outer border -->
   <rect
     x="18"
     y="18"
     width="964"
-    height="524"
+    height="724"
     rx="18"
     fill="none"
     stroke="#f1e2bd"
@@ -656,14 +759,15 @@ def generate_svg(languages, repository_count):
 
 def main():
 
-    username = os.environ.get("GITHUB_USERNAME")
-
-    if not username:
-        username = os.environ.get("GITHUB_REPOSITORY_OWNER")
+    username = (
+        os.environ.get("GITHUB_USERNAME")
+        or os.environ.get("GITHUB_REPOSITORY_OWNER")
+    )
 
     if not username:
         raise RuntimeError(
-            "GITHUB_USERNAME or GITHUB_REPOSITORY_OWNER is required."
+            "GITHUB_USERNAME or GITHUB_REPOSITORY_OWNER "
+            "is required."
         )
 
     token = os.environ.get("GITHUB_TOKEN")
@@ -673,6 +777,7 @@ def main():
     print("        RETRO LANGUAGE STACK")
     print("============================================")
     print()
+
     print(f"GitHub user: {username}")
     print()
 
@@ -688,11 +793,14 @@ def main():
     for language in languages:
         print(
             f"{language['name']:25}"
-            f"{language['percentage']:6.2f}%"
+            f"{language['percentage']:7.2f}%"
         )
 
     print()
-    print(f"Repositories scanned: {repository_count}")
+    print(
+        f"Repositories scanned: "
+        f"{repository_count}"
+    )
     print()
 
     svg = generate_svg(
@@ -710,7 +818,9 @@ def main():
         encoding="utf-8",
     )
 
-    print(f"Generated: {OUTPUT_FILE}")
+    print(
+        f"Generated: {OUTPUT_FILE}"
+    )
     print()
 
 

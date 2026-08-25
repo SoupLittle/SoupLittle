@@ -13,8 +13,8 @@ from pathlib import Path
 
 OUTPUT_FILE = Path("assets/language-stack.svg")
 
-# Five rows fit nicely in the current design.
-DISPLAY_LANGUAGES = 5
+# Six rows fit nicely in the current design.
+DISPLAY_LANGUAGES = 6
 
 # These are the languages that best represent Marlene's actual
 # development stack.
@@ -294,7 +294,7 @@ def prepare_display_languages(
     languages,
 ):
     """
-    Select the five languages shown on the card.
+    Select the six languages shown on the card.
 
     Priority:
 
@@ -802,17 +802,6 @@ def generate_svg(
     </text>
 
     <text
-      x="58"
-      y="91"
-      font-family="Arial, sans-serif"
-      font-size="11"
-      letter-spacing="2"
-      fill="#6d5038"
-    >
-      A SMALL ARCHIVE OF WHAT I BUILD
-    </text>
-
-    <text
       x="944"
       y="70"
       text-anchor="end"
@@ -821,7 +810,7 @@ def generate_svg(
       letter-spacing="1"
       fill="#6d5038"
     >
-      EST. 2023
+      EST. 2021
     </text>
 
 
@@ -976,7 +965,7 @@ def generate_svg(
       x="58"
       y="709"
       font-family="Courier New, monospace"
-      font-size="11"
+      font-size="15"
       letter-spacing="1"
       fill="#f5e7c5"
       opacity=".9"
@@ -989,7 +978,7 @@ def generate_svg(
       y="704"
       text-anchor="end"
       font-family="Georgia, 'Times New Roman', serif"
-      font-size="29"
+      font-size="33"
       font-weight="bold"
       font-style="italic"
       fill="#f5e7c5"

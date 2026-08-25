@@ -1,32 +1,59 @@
 <svg
   width="1000"
-  height="560"
-  viewBox="0 0 1000 560"
+  height="760"
+  viewBox="0 0 1000 760"
   xmlns="http://www.w3.org/2000/svg"
 >
 
   <defs>
 
-    <!-- Vintage paper grain -->
+    <!-- Paper texture -->
     <pattern
       id="paper"
       width="80"
       height="80"
       patternUnits="userSpaceOnUse"
     >
-      <circle cx="8" cy="12" r="1.2"
-        fill="#6f5138" opacity=".10"/>
-      <circle cx="42" cy="25" r="1"
-        fill="#6f5138" opacity=".08"/>
-      <circle cx="67" cy="61" r="1.3"
-        fill="#6f5138" opacity=".09"/>
-      <circle cx="22" cy="70" r=".8"
-        fill="#6f5138" opacity=".08"/>
-      <path d="M4 43l2 1M55 8l2-1M72 36l1 2"
-        stroke="#6f5138" opacity=".07"/>
+      <circle
+        cx="8"
+        cy="12"
+        r="1.2"
+        fill="#6f5138"
+        opacity=".10"
+      />
+
+      <circle
+        cx="42"
+        cy="25"
+        r="1"
+        fill="#6f5138"
+        opacity=".08"
+      />
+
+      <circle
+        cx="67"
+        cy="61"
+        r="1.3"
+        fill="#6f5138"
+        opacity=".09"
+      />
+
+      <circle
+        cx="22"
+        cy="70"
+        r=".8"
+        fill="#6f5138"
+        opacity=".08"
+      />
+
+      <path
+        d="M4 43l2 1M55 8l2-1M72 36l1 2"
+        stroke="#6f5138"
+        opacity=".07"
+      />
     </pattern>
 
-    <!-- Print texture -->
+    <!-- Footer texture -->
     <pattern
       id="dots"
       width="18"
@@ -47,28 +74,30 @@
         x="18"
         y="18"
         width="964"
-        height="524"
+        height="724"
         rx="18"
       />
     </clipPath>
 
   </defs>
 
-  <!-- Dark green outer background -->
+
+  <!-- Outer background -->
   <rect
     width="1000"
-    height="560"
+    height="760"
     fill="#24382b"
   />
 
+
   <g clip-path="url(#round)">
 
-    <!-- Paper -->
+    <!-- Main paper -->
     <rect
       x="18"
       y="18"
       width="964"
-      height="524"
+      height="724"
       fill="#f1e2bd"
     />
 
@@ -76,23 +105,28 @@
       x="18"
       y="18"
       width="964"
-      height="524"
+      height="724"
       fill="url(#paper)"
     />
 
-    <!-- Vintage orange frame -->
+
+    <!-- Frame -->
     <rect
       x="18"
       y="18"
       width="964"
-      height="524"
+      height="724"
       fill="none"
       stroke="#c95231"
       stroke-width="7"
       opacity=".8"
     />
 
-    <!-- Sun -->
+
+    <!-- ================================================== -->
+    <!-- SUN -->
+    <!-- ================================================== -->
+
     <circle
       cx="865"
       cy="112"
@@ -109,7 +143,6 @@
       opacity=".15"
     />
 
-    <!-- Sun rays -->
     <g
       stroke="#c95231"
       stroke-width="5"
@@ -125,7 +158,11 @@
       <path d="M825 152L800 177"/>
     </g>
 
-    <!-- Header -->
+
+    <!-- ================================================== -->
+    <!-- HEADER -->
+    <!-- ================================================== -->
+
     <text
       x="58"
       y="67"
@@ -161,6 +198,7 @@
       EST. 2023
     </text>
 
+
     <!-- Hand-drawn divider -->
     <path
       d="
@@ -177,7 +215,11 @@
       opacity=".65"
     />
 
-    <!-- Title -->
+
+    <!-- ================================================== -->
+    <!-- TITLE -->
+    <!-- ================================================== -->
+
     <text
       x="55"
       y="185"
@@ -217,29 +259,75 @@
       WHAT'S GROWING IN MY REPOSITORIES
     </text>
 
-    <!-- Flower -->
+
+    <!-- ================================================== -->
+    <!-- FLOWER -->
+    <!-- ================================================== -->
+
     <g transform="translate(875 230)">
-      <circle cx="0" cy="-18" r="13" fill="#d7a53a"/>
-      <circle cx="17" cy="-6" r="13" fill="#d7a53a"/>
-      <circle cx="11" cy="14" r="13" fill="#d7a53a"/>
-      <circle cx="-11" cy="14" r="13" fill="#d7a53a"/>
-      <circle cx="-17" cy="-6" r="13" fill="#d7a53a"/>
-      <circle cx="0" cy="0" r="8" fill="#c95030"/>
+
+      <circle
+        cx="0"
+        cy="-18"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="17"
+        cy="-6"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="11"
+        cy="14"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="-11"
+        cy="14"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="-17"
+        cy="-6"
+        r="13"
+        fill="#d7a53a"
+      />
+
+      <circle
+        cx="0"
+        cy="0"
+        r="8"
+        fill="#c95030"
+      />
+
     </g>
 
-    <!-- Language rows -->
+
+    <!-- ================================================== -->
+    <!-- LANGUAGE STACK -->
+    <!-- ================================================== -->
+
     
-      <!-- JavaScript -->
+      <!-- LANGUAGE: JavaScript -->
+
       <circle
         cx="66"
-        cy="330"
+        cy="340"
         r="7"
         fill="#d5a83c"
       />
 
       <text
         x="86"
-        y="335"
+        y="345"
         font-family="Arial, sans-serif"
         font-size="15"
         font-weight="bold"
@@ -249,138 +337,47 @@
 
       <text
         x="943"
-        y="335"
+        y="345"
         text-anchor="end"
         font-family="Courier New, monospace"
         font-size="14"
         font-weight="bold"
         fill="#24382b"
-      >74%</text>
+      >73.9%</text>
 
+      <!-- Empty bar -->
       <rect
         x="86"
-        y="347"
+        y="357"
         width="857"
         height="13"
         rx="6.5"
         fill="#dfcfaa"
       />
 
+      <!-- Actual percentage -->
       <rect
         x="86"
-        y="347"
-        width="857.0"
+        y="357"
+        width="633.1"
         height="13"
         rx="6.5"
         fill="#d5a83c"
       />
 
 
-      <!-- HTML -->
+      <!-- LANGUAGE: Python -->
+
       <circle
         cx="66"
-        cy="389"
-        r="7"
-        fill="#c66a43"
-      />
-
-      <text
-        x="86"
-        y="394"
-        font-family="Arial, sans-serif"
-        font-size="15"
-        font-weight="bold"
-        letter-spacing="1"
-        fill="#24382b"
-      >HTML</text>
-
-      <text
-        x="943"
-        y="394"
-        text-anchor="end"
-        font-family="Courier New, monospace"
-        font-size="14"
-        font-weight="bold"
-        fill="#24382b"
-      >14%</text>
-
-      <rect
-        x="86"
-        y="406"
-        width="857"
-        height="13"
-        rx="6.5"
-        fill="#dfcfaa"
-      />
-
-      <rect
-        x="86"
-        y="406"
-        width="166.4"
-        height="13"
-        rx="6.5"
-        fill="#c66a43"
-      />
-
-
-      <!-- CSS -->
-      <circle
-        cx="66"
-        cy="448"
-        r="7"
-        fill="#b9573d"
-      />
-
-      <text
-        x="86"
-        y="453"
-        font-family="Arial, sans-serif"
-        font-size="15"
-        font-weight="bold"
-        letter-spacing="1"
-        fill="#24382b"
-      >CSS</text>
-
-      <text
-        x="943"
-        y="453"
-        text-anchor="end"
-        font-family="Courier New, monospace"
-        font-size="14"
-        font-weight="bold"
-        fill="#24382b"
-      >11%</text>
-
-      <rect
-        x="86"
-        y="465"
-        width="857"
-        height="13"
-        rx="6.5"
-        fill="#dfcfaa"
-      />
-
-      <rect
-        x="86"
-        y="465"
-        width="127.6"
-        height="13"
-        rx="6.5"
-        fill="#b9573d"
-      />
-
-
-      <!-- Python -->
-      <circle
-        cx="66"
-        cy="507"
+        cy="402"
         r="7"
         fill="#8b7352"
       />
 
       <text
         x="86"
-        y="512"
+        y="407"
         font-family="Arial, sans-serif"
         font-size="15"
         font-weight="bold"
@@ -390,50 +387,156 @@
 
       <text
         x="943"
-        y="512"
+        y="407"
         text-anchor="end"
         font-family="Courier New, monospace"
         font-size="14"
         font-weight="bold"
         fill="#24382b"
-      >1%</text>
+      >0.8%</text>
 
+      <!-- Empty bar -->
       <rect
         x="86"
-        y="524"
+        y="419"
         width="857"
         height="13"
         rx="6.5"
         fill="#dfcfaa"
       />
 
+      <!-- Actual percentage -->
       <rect
         x="86"
-        y="524"
-        width="12.0"
+        y="419"
+        width="8.0"
         height="13"
         rx="6.5"
         fill="#8b7352"
       />
 
 
-    <!-- Footer -->
+      <!-- LANGUAGE: HTML -->
+
+      <circle
+        cx="66"
+        cy="464"
+        r="7"
+        fill="#c66a43"
+      />
+
+      <text
+        x="86"
+        y="469"
+        font-family="Arial, sans-serif"
+        font-size="15"
+        font-weight="bold"
+        letter-spacing="1"
+        fill="#24382b"
+      >HTML</text>
+
+      <text
+        x="943"
+        y="469"
+        text-anchor="end"
+        font-family="Courier New, monospace"
+        font-size="14"
+        font-weight="bold"
+        fill="#24382b"
+      >14.3%</text>
+
+      <!-- Empty bar -->
+      <rect
+        x="86"
+        y="481"
+        width="857"
+        height="13"
+        rx="6.5"
+        fill="#dfcfaa"
+      />
+
+      <!-- Actual percentage -->
+      <rect
+        x="86"
+        y="481"
+        width="122.9"
+        height="13"
+        rx="6.5"
+        fill="#c66a43"
+      />
+
+
+      <!-- LANGUAGE: CSS -->
+
+      <circle
+        cx="66"
+        cy="526"
+        r="7"
+        fill="#b9573d"
+      />
+
+      <text
+        x="86"
+        y="531"
+        font-family="Arial, sans-serif"
+        font-size="15"
+        font-weight="bold"
+        letter-spacing="1"
+        fill="#24382b"
+      >CSS</text>
+
+      <text
+        x="943"
+        y="531"
+        text-anchor="end"
+        font-family="Courier New, monospace"
+        font-size="14"
+        font-weight="bold"
+        fill="#24382b"
+      >11.0%</text>
+
+      <!-- Empty bar -->
+      <rect
+        x="86"
+        y="543"
+        width="857"
+        height="13"
+        rx="6.5"
+        fill="#dfcfaa"
+      />
+
+      <!-- Actual percentage -->
+      <rect
+        x="86"
+        y="543"
+        width="94.3"
+        height="13"
+        rx="6.5"
+        fill="#b9573d"
+      />
+
+
+
+    <!-- ================================================== -->
+    <!-- FOOTER -->
+    <!-- ================================================== -->
+
     <path
-      d="M18 455H982V542H18Z"
+      d="M18 650H982V742H18Z"
       fill="#c95030"
     />
 
     <rect
       x="18"
-      y="455"
+      y="650"
       width="964"
-      height="87"
+      height="92"
       fill="url(#dots)"
     />
 
     <text
       x="58"
-      y="485"
+      y="682"
       font-family="Georgia, 'Times New Roman', serif"
       font-size="23"
       font-weight="bold"
@@ -444,19 +547,19 @@
 
     <text
       x="58"
-      y="509"
+      y="709"
       font-family="Courier New, monospace"
       font-size="11"
       letter-spacing="1"
       fill="#f5e7c5"
       opacity=".9"
     >
-      CULTIVATED ACROSS 50 GITHUB REPOSITORIES
+      CULTIVATED ACROSS 49 GITHUB REPOSITORIES
     </text>
 
     <text
       x="942"
-      y="500"
+      y="704"
       text-anchor="end"
       font-family="Georgia, 'Times New Roman', serif"
       font-size="29"
@@ -469,12 +572,13 @@
 
   </g>
 
+
   <!-- Outer border -->
   <rect
     x="18"
     y="18"
     width="964"
-    height="524"
+    height="724"
     rx="18"
     fill="none"
     stroke="#f1e2bd"

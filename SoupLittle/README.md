@@ -3,20 +3,28 @@
 
 Welcome to Marlene's GitHub account! Here you will find a collection of repositories showcasing various projects and contributions. This README provides an overview of the account and its contents.
 
+<br>
+
+<img
+  src="./assets/language-stack.svg"
+  alt="My GitHub language stack"
+  width="850"
+/>
+
+<br>
+
 ## About ME
 
 Hi, I'm a 20 year old girl who is currently trying to broaden her knowledge on her own time. I love coding, especially coding big projects (mostly full-stack).
 The repositories on this GitHub account reflect my dedication to learning and creating innovative solutions.
 
-- 🔭 My favourite project that I'm working on is [Jarvis for home use](https://github.com/SoupLittle/Jarvis-for-home-management)
-
-- 🌱 I’m currently learning **Python, Javascript and general IoT**
-
-##  I’m currently working on
--  [WarrenB](https://github.com/SoupLittle/WB-API)
+- 🔭 My favorite project that I'm working on is [WarrenB](https://github.com/SoupLittle/WB-API)
 -  A StockMarked API and server-based website designed to help you make good day-trades, it follows Warren Buffett's strategy.
 
-  
+- 🌱 I’m currently learning **Python, Javascript and general IoT** (mostly environmental)
+
+##  I’m currently working on
+
 -  [Drink Recipe](https://github.com/SoupLittle/Drink-recipies)
 -  A small Node.js project that displays drink recipe cards (time, ingredients and steps).
 

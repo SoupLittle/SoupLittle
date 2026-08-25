@@ -1,0 +1,65 @@
+name: Update Language Stack
+
+on:
+  # Update once every day.
+  schedule:
+    - cron: "17 4 * * *"
+
+  # Allows you to manually run it.
+  workflow_dispatch:
+
+  # Also update when the generator changes.
+  push:
+    paths:
+      - "scripts/update_languages.py"
+      - ".github/workflows/update-language-stack.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-language-stack:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout profile repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate language stack
+        env:
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/update_languages.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet -- assets/language-stack.svg; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit updated SVG
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add assets/language-stack.svg
+
+          git commit \
+            -m "chore: update language stack"
+
+          git push
+
+      - name: Nothing changed
+        if: steps.changes.outputs.changed == 'false'
+        run: |
+          echo "Language stack is already up to date."

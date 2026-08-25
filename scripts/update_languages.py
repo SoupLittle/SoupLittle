@@ -1299,6 +1299,7 @@ def generate_svg(
   <rect
     width="{WIDTH}"
     height="{HEIGHT}"
+    fill="{PAPER}"
   />
 
 
